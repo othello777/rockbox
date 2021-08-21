@@ -30,7 +30,7 @@ enum plugin_status plugin_start(const void* parameter)
     /* if you don't use the parameter, you can do like
        this to avoid the compiler warning about it */
     (void)parameter;
-    rb->keyclick_click();
+    //rb->keyclick_click();
     rb->beep_play(440, HZ/2, INT16_MAX);
     /* "rb->" marks a plugin api call. Rockbox offers many of its built-in
      * functions to plugins */
