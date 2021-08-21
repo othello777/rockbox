@@ -1,6 +1,3 @@
-amaze.c
-helloworld.c
-hellorock.c
 #ifdef ROCKBOX_HAS_LOGF
 logfdisp.c
 #endif
