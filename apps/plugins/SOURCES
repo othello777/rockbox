@@ -1,5 +1,4 @@
 /* plugins common to all models */
-amaze.c
 helloworld.c
 hellorock.c
 #if !defined(SIMULATOR) && (CONFIG_BATTERY_MEASURE != 0)
