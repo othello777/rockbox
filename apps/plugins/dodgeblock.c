@@ -23,7 +23,6 @@
 
 /* mandatory include for all plugins */
 #include "plugin.h"
-#include "string.h"
 #define AMP 32000
 
 //characters
@@ -41,8 +40,8 @@ static char *Stringbuilder; //Stringbuilder = new StringBuilder();
 //static KeyCode PressedKey = KeyCode.None;
 //static KeyCode JustPressedKey = KeyCode.None;
 static char *WriteBoard;
-const char *Version = "1.5.2 - fps";
-const char *Title = "DodgeBlock " + Version;
+static char *Version = "1.5.2 - fps";
+//static char *Title = rb->strcat("DodgeBlock ", Version);
 static int MaxMode = 4;
 static char *settingslocation;
 static char *SecretCode = "You have not died yet.";
@@ -96,12 +95,12 @@ static int Position;
 static int Position2;
 static int OldPosition;
 static int OldPosition2;
-static char BackBoard[][];
-static char UseBoard[][];
+static char **BackBoard;
+static char **UseBoard;
 
 static int GetRand(int from, int to)
 {
-	return from + (int)(rb->rand * ((to - from) + RAND_MAX));
+	return 0;//from + (int)(rb->rand * ((to - from) + RAND_MAX));
 }
 
 static int GetRand2(int from, int to)
@@ -114,73 +113,32 @@ static void TextBoxWriteLine(char *string)
 
 }
 
+static void TextBoxReplace(char *string)
+{
+
+}
+
+static void GameInitialized(void)
+{
+
+}
+
+static void BlueBackground(bool toggle)
+{
+
+}
+
 static void DoSleep(int ms)
 {
 	rb->sleep(HZ * ms / 1000);
 }
 
-static void IsKeyDown(int key)
+static bool IsKeyDown(int key)
 {
-
+	return false;
 }
 
-
-static void Game()
-{
-	TextBoxWriteLine("Start!");
-	//init
-	TextBoxWriteLine("Initializing");
-	Initialize();
-	TextBoxWriteLine("Setting Colors");
-	InitConsoleColors();
-	BlueBackground(false);
-
-	ImportSettings();
-
-	InternetConnect();
-
-	//Start Screen
-	StartScreen();
-
-	//if (MuteMusic)
-	//	music.PauseMusic();
-
-	if (Mode > MaxMode)
-	{
-		Tick = 10;
-		Avatar = '%';
-		Avatar2 = '$';
-		Backdrop = 'O';
-		BonusPoint = '.';
-	}
-
-
-
-	Run();
-
-
-
-	TextBoxWriteLineRtf("\nQuitting...");
-
-	/*if (MuteMusic == false)
-		music.TerminateMusic();
-	else
-	{
-		music.ResumeMusic();
-		music.TerminateMusic();
-	}
-
-	DiscordDB.die();*/
-
-	DoSleep(1000);
-	CloseThis();
-
-
-}
-
-
-
-static void Initialize()
+static void Initialize(void)
 {
 	Avatar = 'O';
 	Avatar2 = 'S';
@@ -277,7 +235,7 @@ static void Initialize()
 	//DiscordDB.UpdatePresence();
 }
 
-static void ImportSettings()
+static void ImportSettings(void)
 {
 	/*TextBoxWriteLine("Importing Settings From " + settingslocation);
 	try
@@ -299,7 +257,7 @@ static void ImportSettings()
 		UseCheckpoints = Boolconvert(Settings[39]);
 
 		music.init();
-		customModeC.SettingsChanged();*/
+		customModeC.SettingsChanged();
 
 		if (IsHolloween || IsChristmas)
 		{
@@ -310,14 +268,14 @@ static void ImportSettings()
 		{
 			TextBoxWriteLine("Fullscreening");
 			Fullscreen(true);
-		}
+		}*/
 
 		loadsuccess = true;
-		ImportHighScore();
+		//ImportHighScore();
 
 		TwoPlayerMode = false;
 		ColorMode = true;
-		ConvertTwoPlayerMode();
+		//ConvertTwoPlayerMode();
 
 
 	/*}
@@ -334,8 +292,8 @@ static void ImportSettings()
 
 }
 
-static void InternetConnect()
-{/*
+/*static void InternetConnect()
+{
 	//See if we are allowed to use Internet
 	if (!AllowInternet)
 	{
@@ -434,46 +392,16 @@ static void InternetConnect()
 			NotReturned = false;
 		}
 		DoSleep(150);
-	}*/
-}
+	}
+}*/
 
-static void InitConsoleColors()
+static void InitConsoleColors(void)
 {
 	//StringBuilderSetBackgroundColor = ConsoleColor.Black;
 	//StringBuilderSetColor = ConsoleColor.White;
 }
 
-
-
-static void Run(){
-	//Run
-	while (Refresh){
-
-		TestKeydowns();
-
-		PositionPlayers();
-
-		/*if (ScoreFlashTimer <= TimerCounter && ScoreFlashTimer > TimerCounter - 10 &&
-				ColorMode == true && TimerCounter > 20)
-			InitStringBuilder(ConsoleColor.Magenta);
-		else
-			InitStringBuilder(ConsoleColor.White);
-*/
-		BlockHandling();
-
-
-		WriteBoard = Stringbuilder;
-
-		DisplayAndDelay();
-
-		//DiscordDB.Update();
-		DoSleep(Tick);
-	}
-}
-
-
-
-static void TestKeydowns()
+static void TestKeydowns(void)
 {
 	//NativeKeyboard.Update();
 
@@ -518,7 +446,7 @@ static void TestKeydowns()
 
 
 
-static void PositionPlayers()
+static void PositionPlayers(void)
 {
 	//Position
 	UseBoard[Position, 0] = 'O';
@@ -556,22 +484,7 @@ static void PositionPlayers()
 	}
 }
 
-//Display&Delay
-static void DisplayAndDelay()
-{
-	//Display
-	WriteToScreen();
-	TextBoxReplaceRtf(WriteBoard);
-	//BenchFPS.OnMapUpdated();
 
-	//Delay
-	if (GodMode == false)
-		Score += 1;
-	TimerCounter += 1;
-	UpdateDificultyCurve();
-	if (Score > HighScore)
-		HighScore = Score;
-}
 
 /*static ConsoleColor StringBuilderSetColor
 {
@@ -581,40 +494,40 @@ static void DisplayAndDelay()
 		switch (value)
 		{
 			case ConsoleColor.Black:
-				Stringbuilder += ("\cf0");
+				Stringbuilder = rb->strcat(Stringbuilder,"\cf0");
 				break;
 			case ConsoleColor.White:
-				Stringbuilder += ("\cf1");
+				Stringbuilder = rb->strcat(Stringbuilder,"\cf1");
 				break;
 			case ConsoleColor.Green:
-				Stringbuilder += ("\cf2");
+				Stringbuilder = rb->strcat(Stringbuilder,"\cf2");
 				break;
 			case ConsoleColor.Yellow:
-				Stringbuilder += ("\cf3");
+				Stringbuilder = rb->strcat(Stringbuilder,"\cf3");
 				break;
 			case ConsoleColor.Magenta:
-				Stringbuilder += ("\cf4");
+				Stringbuilder = rb->strcat(Stringbuilder,"\cf4");
 				break;
 			case ConsoleColor.Red:
-				Stringbuilder += ("\cf5");
+				Stringbuilder = rb->strcat(Stringbuilder,"\cf5");
 				break;
 			case ConsoleColor.Blue:
-				Stringbuilder += ("\cf6");
+				Stringbuilder = rb->strcat(Stringbuilder,"\cf6");
 				break;
 			case ConsoleColor.Cyan:
-				Stringbuilder += ("\cf7");
+				Stringbuilder = rb->strcat(Stringbuilder,"\cf7");
 				break;
 			case ConsoleColor.DarkMagenta:
-				Stringbuilder += ("\cf8");
+				Stringbuilder = rb->strcat(Stringbuilder,"\cf8");
 				break;
 			case ConsoleColor.DarkGreen:
-				Stringbuilder += ("\cf9");
+				Stringbuilder = rb->strcat(Stringbuilder,"\cf9");
 				break;
 			case ConsoleColor.DarkGray:
-				Stringbuilder += ("\cf10");
+				Stringbuilder = rb->strcat(Stringbuilder,"\cf10");
 				break;
 			default:
-				Stringbuilder += ("\cf1");
+				Stringbuilder = rb->strcat(Stringbuilder,"\cf1");
 				break;
 
 		}
@@ -631,31 +544,31 @@ static ConsoleColor StringBuilderSetBackgroundColor
 		switch (value)
 		{
 			case ConsoleColor.Black:
-				Stringbuilder += ("\highlight0");
+				Stringbuilder = rb->strcat(Stringbuilder,"\highlight0");
 				break;
 			case ConsoleColor.White:
-				Stringbuilder += ("\highlight1");
+				Stringbuilder = rb->strcat(Stringbuilder,"\highlight1");
 				break;
 			case ConsoleColor.Magenta:
-				Stringbuilder += ("\highlight4");
+				Stringbuilder = rb->strcat(Stringbuilder,"\highlight4");
 				break;
 			case ConsoleColor.Green:
-				Stringbuilder += ("\highlight2");
+				Stringbuilder = rb->strcat(Stringbuilder,"\highlight2");
 				break;
 			case ConsoleColor.Yellow:
-				Stringbuilder += ("\highlight3");
+				Stringbuilder = rb->strcat(Stringbuilder,"\highlight3");
 				break;
 			case ConsoleColor.Red:
-				Stringbuilder += ("\highlight5");
+				Stringbuilder = rb->strcat(Stringbuilder,"\highlight5");
 				break;
 			case ConsoleColor.Blue:
-				Stringbuilder += ("\highlight6");
+				Stringbuilder = rb->strcat(Stringbuilder,"\highlight6");
 				break;
 			case ConsoleColor.Cyan:
-				Stringbuilder += ("\highlight7");
+				Stringbuilder = rb->strcat(Stringbuilder,"\highlight7");
 				break;
 			default:
-				Stringbuilder += ("\highlight0");
+				Stringbuilder = rb->strcat(Stringbuilder,"\highlight0");
 				break;
 
 		}
@@ -664,23 +577,58 @@ static ConsoleColor StringBuilderSetBackgroundColor
 	}
 }*/
 
-static void InitStringBuilder()
+static void InitStringBuilder(void)
 {
 	//prepare Stringbuilder
 	Stringbuilder = "";
-	Stringbuilder +=  ("\fs" + BoardSize);
+	//Stringbuilder +=  ("" + BoardSize);
 	//StringBuilderSetColor = color;
 	/*if (Mode == 4 && customModeC.CustomModeAble)
-		Stringbuilder += ("        Score:" + Score +  @" \line\line "
+		Stringbuilder = rb->strcat(Stringbuilder,"        Score:" + Score +  @" \n\n "
 		   + "                     " + Math.Round(BenchFPS.DoGetFps(), 5) + "FPS");
 	else*/
-		Stringbuilder += ("        Score:" + Score + " \line   High Score:" + HighScore + " \line "
-		   );//+ "                     " + Math.Round(BenchFPS.DoGetFps(), 5) + "FPS");
+		Stringbuilder = rb->strcat(Stringbuilder, rb->strcat("        Score: ", Score));
+		Stringbuilder = rb->strcat(Stringbuilder, ("\n   High Score: ", HighScore));
+		Stringbuilder = rb->strcat(Stringbuilder, "\n");
+		//+ "                     " + Math.Round(BenchFPS.DoGetFps(), 5) + "FPS");
 }
 
+static bool Flasher(void)
+{
+	if (TimerCounter >= FlasherCounter + 10)
+	{
+		FlasherCounter = TimerCounter;
+		if (FlasherFlipFlop)
+			FlasherFlipFlop = false;
+		else
+			FlasherFlipFlop = true;
+	}
 
+	return FlasherFlipFlop;
+}
 
-static void WriteToScreen()
+static void BoardAppend(void)
+{
+	if (Mode == 1 /*|| Mode == 4 && !customModeC.CustomModeAble*/)
+	{
+		//StringBuilderSetColor = ConsoleColor.White;
+
+		Stringbuilder = rb->strcat(Stringbuilder, rb->strcat("\n\n Ammo = ", Ammo));
+		Stringbuilder = rb->strcat(Stringbuilder, rb->strcat(" Shields = ", Shields));
+
+		InitConsoleColors();
+	}
+}
+
+static bool CheckPointFlasher(void)
+{
+	if ((Mode == 0 || Mode == 2) && UseCheckpoints)
+		if ((Score >= 1000 && Score <= 1010) || (Score >= 500 && Score <= 510))
+			return true;
+	return false;
+}
+
+static void WriteToScreen(void)
 {
 	int Margin = 5;
 	char ** BoardToSide =
@@ -718,21 +666,22 @@ static void WriteToScreen()
 
 			if(CheckPointFlasher())
 				StringBuilderSetColor = ConsoleColor.Cyan;*/
-			Stringbuilder += ("\line  | ");
+			Stringbuilder = rb->strcat(Stringbuilder,"\n  | ");
 			InitConsoleColors();
 		}
 		else
-			Stringbuilder += ("\line    ");
+			Stringbuilder = rb->strcat(Stringbuilder,"\n    ");
 
 		for (int j = 0; j < GameWidth; j++)
 		{
 			//StringBuilderSetBackgroundColor = UseBoard[j, i].BackColor;
 
 			//StringBuilderSetColor = UseBoard[j, i].Color;
-			Stringbuilder += (UseBoard[j, i]);
+			//Stringbuilder = rb->strcat(Stringbuilder,UseBoard[j,i]);
+			//char *a = rb->strcat("","");
 		}
 
-		Stringbuilder += ("\highlight0 ");
+		//Stringbuilder = rb->strcat(Stringbuilder,"\highlight0 ");
 
 		if (Score == HighScore && !(Mode == 4/* && customModeC.CustomModeAble*/) && Flasher() ||
 			ScoreFlashTimer <= TimerCounter && ScoreFlashTimer > TimerCounter - 10 && TimerCounter > 20 ||
@@ -747,20 +696,20 @@ static void WriteToScreen()
 			if (CheckPointFlasher())
 				StringBuilderSetColor = ConsoleColor.Cyan;*/
 
-			Stringbuilder += ("  |");
+			Stringbuilder = rb->strcat(Stringbuilder,"  |");
 		}
 		else
 		{
-			Stringbuilder += ("  ");
+			Stringbuilder = rb->strcat(Stringbuilder,"  ");
 		}
 		InitConsoleColors();
 
 		for (int m = 0; m < Margin; m++)
 		{
-			Stringbuilder += (" ");
+			Stringbuilder = rb->strcat(Stringbuilder," ");
 		}
 		if (GameHeight - 1 - i < sizeof BoardToSide / sizeof BoardToSide[0])
-			Stringbuilder += (BoardToSide[GameHeight - 1 - i]);
+			Stringbuilder = rb->strcat(Stringbuilder,BoardToSide[GameHeight - 1 - i]);
 
 
 
@@ -771,22 +720,7 @@ static void WriteToScreen()
 	WriteBoard = Stringbuilder;
 }
 
-
-static bool Flasher()
-{
-	if (TimerCounter >= FlasherCounter + 10)
-	{
-		FlasherCounter = TimerCounter;
-		if (FlasherFlipFlop)
-			FlasherFlipFlop = false;
-		else
-			FlasherFlipFlop = true;
-	}
-
-	return FlasherFlipFlop;
-}
-
-static void FallingObjectTimers()
+static void FallingObjectTimers(void)
 {
 	if (TimerCounter >= timer10 + 10)
 	{
@@ -805,7 +739,7 @@ static void FallingObjectTimers()
 }
 
 
-static void UpdateDificultyCurve()
+static void UpdateDificultyCurve(void)
 {
 	CurveTimer += 1;
 	if (CurveTimer >= 250 && BlockTick > 0)
@@ -815,7 +749,7 @@ static void UpdateDificultyCurve()
 	}
 }
 
-static void StringBuilderBuild()
+static void StringBuilderBuild(void)
 {
 
 	//Turn Arrays into a String
@@ -827,11 +761,11 @@ static void StringBuilderBuild()
 				ScoreFlashTimer > TimerCounter - 10 && TimerCounter > 20)
 			{
 
-				Stringbuilder += ("\line  | ");
+				Stringbuilder = rb->strcat(Stringbuilder,"\n  | ");
 
 			}
 			else
-				Stringbuilder += ("\line    ");
+				Stringbuilder = rb->strcat(Stringbuilder,"\n    ");
 		}
 		else
 		{
@@ -839,22 +773,22 @@ static void StringBuilderBuild()
 				ScoreFlashTimer > TimerCounter - 10 && TimerCounter > 20)
 			{
 
-				Stringbuilder += ("\n  | ");
+				Stringbuilder = rb->strcat(Stringbuilder,"\n  | ");
 
 			}
 			else
-				Stringbuilder += ("\n    ");
+				Stringbuilder = rb->strcat(Stringbuilder,"\n    ");
 		}
 		for (int j = 0; j < GameWidth; j++)
 		{
-			Stringbuilder += (UseBoard[j, i]);
+			Stringbuilder = rb->strcat(Stringbuilder,UseBoard[j, i]);
 		}
 
 		if (Score == HighScore && Flasher() || ScoreFlashTimer <= TimerCounter &&
 			ScoreFlashTimer > TimerCounter - 10 && TimerCounter > 20)
 		{
 
-			Stringbuilder += (" |  ");
+			Stringbuilder = rb->strcat(Stringbuilder," |  ");
 
 		}
 
@@ -863,26 +797,14 @@ static void StringBuilderBuild()
 	WriteBoard = Stringbuilder;
 }
 
-static void BoardAppend()
-{
-	if (Mode == 1 /*|| Mode == 4 && !customModeC.CustomModeAble*/)
-	{
-		//StringBuilderSetColor = ConsoleColor.White;
-
-		Stringbuilder += ("\line\line Ammo = " + Ammo + " Shields = " + Shields );
-
-		InitConsoleColors();
-	}
-}
-
 static void DeathScreen(int Place)
 {
 	void deathinit()
 	{
 		Stringbuilder = "";
-		Stringbuilder += ("\fs" + BoardSize);
+		Stringbuilder = rb->strcat(Stringbuilder, BoardSize);
 		//StringBuilderSetColor = ConsoleColor.Red;
-		Stringbuilder += ("\line\line ");
+		Stringbuilder = rb->strcat(Stringbuilder,"\n\n ");
 	}
 	if (ColorMode)
 	{
@@ -965,7 +887,289 @@ static void DeathScreen(int Place)
 	}
 }*/
 
-static void BlockHandling()
+static void ResetGame(void)
+{
+	Tick = 60;
+	if (Mode > MaxMode)
+		Tick = 10;
+	if (Mode < 4)
+		snowflaketimer = 0;
+	Score = 0;
+	Ammo = 0;
+	Shields = 0;
+	CurveTimer = 0;
+	GameWidth = 12;
+	GameHeight = 7;
+	BlockTick = BlockTickBase;
+	for (int i = 0; i < GameHeight; i++)
+	{
+		for (int j = 0; j < GameWidth; j++)
+		{
+			BackBoard[j, i] = '.';
+		}
+	}
+	//UseBoard = BackBoard.Clone() as char[,];
+	TimerCounter = 0;
+	ScoreFlashTimer = 0;
+	timer10 = 0;
+	timer100 = 0;
+	timer300 = 0;
+	raadmodetimerding = false;
+
+	//customModeC.SettingsChanged();
+}
+
+static void DoCheckPoints(int savescore)
+{
+	if ((Mode == 0 || Mode == 2) && UseCheckpoints)
+	{
+		if (savescore >= 1000)
+		{
+			Score = 1000;
+			TimerCounter = 1000;
+			BlockTick = BlockTickBase - 4;
+		}
+		else if (savescore >= 500)
+		{
+			Score = 500;
+			TimerCounter = 500;
+			BlockTick = BlockTickBase - 2;
+		}
+	}
+}
+
+static void OnDeath(int j)
+{
+	/*music.PauseMusic();
+
+	if (MuteSfx == false)
+		music.DieNoise();
+
+	// log highscore
+	if (loadsuccess && Score == HighScore && !(Mode == 4 && customModeC.CustomModeAble))
+	{
+		if (Mode == 0)
+			write.ToThisTxt(1, HighScore.ToString());
+		else if (Mode == 1)
+			write.ToThisTxt(25, HighScore.ToString());
+		else if (Mode == 2)
+			write.ToThisTxt(33, HighScore.ToString());
+		else if (Mode == 3)
+			write.ToThisTxt(3, HighScore.ToString());
+		else if (Mode == 4 && IsHolloween)
+			write.ToThisTxt(27, HighScore.ToString());
+		else if (Mode == 4 && IsChristmas)
+			write.ToThisTxt(35, HighScore.ToString());
+	}*/
+
+	// setting deathscreen
+	void OnPostDeathScreen()
+	{
+		Stringbuilder = "";
+
+		/*if (IsHolloween)
+		{
+			StringBuilderSetColor = ConsoleColor.DarkMagenta;
+			Stringbuilder = rb->strcat(Stringbuilder,"" + BoardSize + " ");
+		}
+		else if (IsThanksgiving)
+		{
+			StringBuilderSetColor = ConsoleColor.DarkGray;
+			Stringbuilder = rb->strcat(Stringbuilder,"" + BoardSize + " ");
+		}
+		else
+		{
+			StringBuilderSetColor = ConsoleColor.Cyan;
+			Stringbuilder = rb->strcat(Stringbuilder,"" + BoardSize + " ");
+		}*/
+	}
+	// add endline
+	void LineBreak()
+	{
+		if (ColorMode)
+			Stringbuilder = rb->strcat(Stringbuilder,"\n ");
+		else
+			Stringbuilder = rb->strcat(Stringbuilder,"\n");
+	}
+
+	// kill the bloody loser
+	/*if (TwoPlayerMode)
+	{
+		if (j == Position && j == Position2)
+		{
+			DeathScreen(Position);
+			OnPostDeathScreen();
+			Stringbuilder = rb->strcat(Stringbuilder,"Both Players Died!");
+		}
+		else if (j == Position2)
+		{
+			DeathScreen(Position2);
+			OnPostDeathScreen();
+			Stringbuilder = rb->strcat(Stringbuilder,"Player2 Died! (" + Avatar2 + ")");
+		}
+		else
+		{
+			DeathScreen(Position);
+			OnPostDeathScreen();
+			Stringbuilder = rb->strcat(Stringbuilder,"Player1 Died! (" + Avatar + ")");
+		}
+	}
+	else
+	{*/
+		DeathScreen(Position);
+		OnPostDeathScreen();
+		Stringbuilder = rb->strcat(Stringbuilder,"You Died!");
+	//}
+	LineBreak();
+
+
+
+	// add the results
+	Stringbuilder = rb->strcat(Stringbuilder,"Your Score: " + Score);
+	LineBreak();
+	if (Score >= HighScore)
+	{
+		Stringbuilder = rb->strcat(Stringbuilder,"*New High Score!*");
+		/*if (ColorMode)
+			StringBuilderSetColor = ConsoleColor.Yellow;
+
+		if (IsHolloween)
+		{
+			StringBuilderSetColor = ConsoleColor.DarkMagenta;
+		}
+		else if (IsThanksgiving)
+		{
+			StringBuilderSetColor = ConsoleColor.DarkGray;
+		}
+		else
+		{
+			StringBuilderSetColor = ConsoleColor.Cyan;
+		}*/
+		LineBreak();
+	}
+	else
+	{
+		Stringbuilder = rb->strcat(Stringbuilder,"High Score: " + HighScore);
+		LineBreak();
+
+	}
+
+
+
+	Stringbuilder = rb->strcat(Stringbuilder,"Playing: ");
+	if (Mode == 0)
+	{
+		Stringbuilder = rb->strcat(Stringbuilder,"Classic Mode");
+	}
+	else if (Mode == 1)
+	{
+		Stringbuilder = rb->strcat(Stringbuilder,"Normal Mode");
+	}
+	else if (Mode == 2)
+	{
+		Stringbuilder = rb->strcat(Stringbuilder,"Expert Mode");
+	}
+	else if (Mode == 3)
+	{
+		Stringbuilder = rb->strcat(Stringbuilder,"Two Player Mode");
+	}
+	else if (Mode == 4 && IsHolloween)
+	{
+		Stringbuilder = rb->strcat(Stringbuilder,"Halloween Event");
+	}
+	else if (Mode == 4 && IsChristmas)
+	{
+		Stringbuilder = rb->strcat(Stringbuilder,"Winter Event");
+	}
+	else if (Mode == 4)
+	{
+		Stringbuilder = rb->strcat(Stringbuilder,"Custom Mode");
+	}
+	else
+	{
+		Stringbuilder = rb->strcat(Stringbuilder,"raaad mode");
+	}
+	if((Mode == 0 || Mode == 2) && UseCheckpoints)
+	{
+		if (Score > 500)
+			LineBreak();
+		if (Score > 1000)
+			Stringbuilder = rb->strcat(Stringbuilder,"Checkpoint Achieved: 1000");
+		else if (Score > 500)
+			Stringbuilder = rb->strcat(Stringbuilder,"Checkpoint Achieved: 500");
+	}
+
+	LineBreak();
+	LineBreak();
+	Stringbuilder = rb->strcat(Stringbuilder,"Press Up to Continue");
+	LineBreak();
+	Stringbuilder = rb->strcat(Stringbuilder,"Press Down to Quit");
+
+	WriteBoard = Stringbuilder;
+	if (ColorMode)
+		TextBoxReplaceRtf(WriteBoard);
+	else
+		TextBoxReplace(WriteBoard);
+
+
+	if (loadsuccess)
+	{
+		char *modeAppend;
+		if (Mode == 0)
+			modeAppend = "C";
+		else if (Mode == 1)
+			modeAppend = "N";
+		else if (Mode == 2)
+			modeAppend = "H";
+		else if (Mode == 3)
+			modeAppend = "T";
+		else if (Mode == 4 && (IsHolloween))
+			modeAppend = "HW-EVNT";
+		else if (Mode == 4 && (IsChristmas))
+			modeAppend = "CHR-EVNT";
+		//else if (Mode == 4 && (Mode == 4 || customModeC.CustomModeAble))
+		//	modeAppend = "CSTM";
+		else
+			modeAppend = "R";
+		//write.ToThisTxt(31, SecretCode);
+		GameInitialized();
+	}
+	else
+	{
+		SecretCode = "WARNING: Settings.txt not loaded correctly. Please ensure that Settings.txt and Dodgeblock.exe are in the same directory and not zipped!";
+		GameInitialized();
+	}
+
+	//DiscordDB.UpdatePresence();
+
+	bool go = true;
+	while (go)
+	{
+		if (IsKeyDown(0))
+		{
+			go = false;
+		}
+		if (IsKeyDown(1))
+		{
+			go = false;
+			Refresh = false;
+			Quitting = true;
+
+
+		}
+		DoSleep(80);
+	}
+
+	int savescore = TimerCounter;
+	ResetGame();
+	DoCheckPoints(savescore);
+
+	//if (MuteMusic == false)
+	//	music.ResumeMusic();
+	InitConsoleColors();
+}
+
+static void BlockHandling(void)
 {
 	//=======V====Falling=Objects====V======
 
@@ -1203,7 +1407,7 @@ static void BlockHandling()
 			{
 				UseBoard[GetRand2(0, GameWidth), GameHeight - 1] = '~';
 				PowerFliper = true;
-			}
+			}*/
 		}
 
 
@@ -1255,296 +1459,6 @@ static void BlockHandling()
 
 
 }   //=====/\===================/\======
-
-static void OnDeath(int j)
-{
-	/*music.PauseMusic();
-
-	if (MuteSfx == false)
-		music.DieNoise();
-
-	// log highscore
-	if (loadsuccess && Score == HighScore && !(Mode == 4 && customModeC.CustomModeAble))
-	{
-		if (Mode == 0)
-			write.ToThisTxt(1, HighScore.ToString());
-		else if (Mode == 1)
-			write.ToThisTxt(25, HighScore.ToString());
-		else if (Mode == 2)
-			write.ToThisTxt(33, HighScore.ToString());
-		else if (Mode == 3)
-			write.ToThisTxt(3, HighScore.ToString());
-		else if (Mode == 4 && IsHolloween)
-			write.ToThisTxt(27, HighScore.ToString());
-		else if (Mode == 4 && IsChristmas)
-			write.ToThisTxt(35, HighScore.ToString());
-	}*/
-
-	// setting deathscreen
-	void OnPostDeathScreen()
-	{
-		Stringbuilder = "";
-
-		/*if (IsHolloween)
-		{
-			StringBuilderSetColor = ConsoleColor.DarkMagenta;
-			Stringbuilder += ("\fs" + BoardSize + " ");
-		}
-		else if (IsThanksgiving)
-		{
-			StringBuilderSetColor = ConsoleColor.DarkGray;
-			Stringbuilder += ("\fs" + BoardSize + " ");
-		}
-		else
-		{
-			StringBuilderSetColor = ConsoleColor.Cyan;
-			Stringbuilder += ("\fs" + BoardSize + " ");
-		}*/
-	}
-	// add endline
-	void LineBreak()
-	{
-		if (ColorMode)
-			Stringbuilder += ("\line ");
-		else
-			Stringbuilder += ("\n");
-	}
-
-	// kill the bloody loser
-	if (TwoPlayerMode)
-	{
-		if (j == Position && j == Position2)
-		{
-			DeathScreen(Position);
-			OnPostDeathScreen();
-			Stringbuilder += ("Both Players Died!");
-		}
-		else if (j == Position2)
-		{
-			DeathScreen(Position2);
-			OnPostDeathScreen();
-			Stringbuilder += ("Player2 Died! (" + Avatar2 + ")");
-		}
-		else
-		{
-			DeathScreen(Position);
-			OnPostDeathScreen();
-			Stringbuilder += ("Player1 Died! (" + Avatar + ")");
-		}
-	}
-	else
-	{
-		DeathScreen(Position);
-		OnPostDeathScreen();
-		Stringbuilder += ("You Died!");
-	}
-	LineBreak();
-
-
-
-	// add the results
-	Stringbuilder += ("Your Score: " + Score);
-	LineBreak();
-	if (Score >= HighScore)
-	{
-		Stringbuilder += ("*New High Score!*");
-		/*if (ColorMode)
-			StringBuilderSetColor = ConsoleColor.Yellow;
-
-		if (IsHolloween)
-		{
-			StringBuilderSetColor = ConsoleColor.DarkMagenta;
-		}
-		else if (IsThanksgiving)
-		{
-			StringBuilderSetColor = ConsoleColor.DarkGray;
-		}
-		else
-		{
-			StringBuilderSetColor = ConsoleColor.Cyan;
-		}*/
-		LineBreak();
-	}
-	else
-	{
-		Stringbuilder += ("High Score: " + HighScore);
-		LineBreak();
-
-	}
-
-
-
-	Stringbuilder += ("Playing: ");
-	if (Mode == 0)
-	{
-		Stringbuilder += ("Classic Mode");
-	}
-	else if (Mode == 1)
-	{
-		Stringbuilder += ("Normal Mode");
-	}
-	else if (Mode == 2)
-	{
-		Stringbuilder += ("Expert Mode");
-	}
-	else if (Mode == 3)
-	{
-		Stringbuilder += ("Two Player Mode");
-	}
-	else if (Mode == 4 && IsHolloween)
-	{
-		Stringbuilder += ("Halloween Event");
-	}
-	else if (Mode == 4 && IsChristmas)
-	{
-		Stringbuilder += ("Winter Event");
-	}
-	else if (Mode == 4)
-	{
-		Stringbuilder += ("Custom Mode");
-	}
-	else
-	{
-		Stringbuilder += ("raaad mode");
-	}
-	if((Mode == 0 || Mode == 2) && UseCheckpoints)
-	{
-		if (Score > 500)
-			LineBreak();
-		if (Score > 1000)
-			Stringbuilder += ("Checkpoint Achieved: 1000");
-		else if (Score > 500)
-			Stringbuilder += ("Checkpoint Achieved: 500");
-	}
-
-	LineBreak();
-	LineBreak();
-	Stringbuilder += ("Press Up to Continue");
-	LineBreak();
-	Stringbuilder += ("Press Down to Quit");
-
-	WriteBoard = Stringbuilder;
-	if (ColorMode)
-		TextBoxReplaceRtf(WriteBoard);
-	else
-		TextBoxReplace(WriteBoard);
-
-
-	if (loadsuccess)
-	{
-		char *modeAppend;
-		if (Mode == 0)
-			modeAppend = "C";
-		else if (Mode == 1)
-			modeAppend = "N";
-		else if (Mode == 2)
-			modeAppend = "H";
-		else if (Mode == 3)
-			modeAppend = "T";
-		else if (Mode == 4 && (IsHolloween))
-			modeAppend = "HW-EVNT";
-		else if (Mode == 4 && (IsChristmas))
-			modeAppend = "CHR-EVNT";
-		//else if (Mode == 4 && (Mode == 4 || customModeC.CustomModeAble))
-		//	modeAppend = "CSTM";
-		else
-			modeAppend = "R";
-		//write.ToThisTxt(31, SecretCode);
-		GameInitialized();
-	}
-	else
-	{
-		SecretCode = "WARNING: Settings.txt not loaded correctly. Please ensure that Settings.txt and Dodgeblock.exe are in the same directory and not zipped!";
-		GameInitialized();
-	}
-
-	//DiscordDB.UpdatePresence();
-
-	bool go = true;
-	while (go)
-	{
-		if (IsKeyDown(0))
-		{
-			go = false;
-		}
-		if (IsKeyDown(1))
-		{
-			go = false;
-			Refresh = false;
-			Quitting = true;
-
-
-		}
-		DoSleep(80);
-	}
-
-	int savescore = TimerCounter;
-	ResetGame();
-	DoCheckPoints(savescore);
-
-	//if (MuteMusic == false)
-	//	music.ResumeMusic();
-	InitConsoleColors();
-}
-
-static void ResetGame()
-{
-	Tick = 60;
-	if (Mode > MaxMode)
-		Tick = 10;
-	if (Mode < 4)
-		snowflaketimer = 0;
-	Score = 0;
-	Ammo = 0;
-	Shields = 0;
-	CurveTimer = 0;
-	GameWidth = 12;
-	GameHeight = 7;
-	BlockTick = BlockTickBase;
-	for (int i = 0; i < GameHeight; i++)
-	{
-		for (int j = 0; j < GameWidth; j++)
-		{
-			BackBoard[j, i] = '.';
-		}
-	}
-	//UseBoard = BackBoard.Clone() as char[,];
-	TimerCounter = 0;
-	ScoreFlashTimer = 0;
-	timer10 = 0;
-	timer100 = 0;
-	timer300 = 0;
-	raadmodetimerding = false;
-
-	//customModeC.SettingsChanged();
-}
-
-static void DoCheckPoints(int savescore)
-{
-	if ((Mode == 0 || Mode == 2) && UseCheckpoints)
-	{
-		if (savescore >= 1000)
-		{
-			Score = 1000;
-			TimerCounter = 1000;
-			BlockTick = BlockTickBase - 4;
-		}
-		else if (savescore >= 500)
-		{
-			Score = 500;
-			TimerCounter = 500;
-			BlockTick = BlockTickBase - 2;
-		}
-	}
-}
-
-static bool CheckPointFlasher()
-{
-	if ((Mode == 0 || Mode == 2) && UseCheckpoints)
-		if ((Score >= 1000 && Score <= 1010) || (Score >= 500 && Score <= 510))
-			return true;
-	return false;
-}
 
 //also ye old code
 /*static void SettingsMenu()
@@ -1610,7 +1524,7 @@ static bool CheckPointFlasher()
 
 }*/
 
-static void StartScreen()
+static void StartScreen(void)
 {
 	TextBoxWriteLine("CONGRATS! starting.");
 	DoSleep(1000);
@@ -1621,7 +1535,7 @@ static void StartScreen()
 	bool NotStarted = true;
 	while (NotStarted)
 	{
-		if (IsHolloween)
+		/*if (IsHolloween)
 		{
 			TextBoxReplace("        Version " + Version + "  \n" +
 		"################################\n" +
@@ -1633,7 +1547,7 @@ static void StartScreen()
 		"################################\n" +
 		"\n       (c) othello7 2020");
 		}
-		/*else if (IsThanksgiving)
+		else if (IsThanksgiving)
 		{
 			TextBoxReplace("        Version " + Version + "  \n" +
 		"################################\n" +
@@ -1658,21 +1572,15 @@ static void StartScreen()
 		@"#.[  |  ]................| |...#" + "\n" +
 		@"################################" + "\n" +
 		"\n       (c) othello7 2020");
-		}*/
+		}
 		else
-		{
-			TextBoxReplace("        Version " + Version + "  \n" +
-					"################################" + "\n" +
-					"#..............................#" + "\n" +
-					"#.........@@@@@@@@@@@@.........#" + "\n" +
-					"#.........@ Press Up @.........#" + "\n" +
-					"#.........@@@@@@@@@@@@.........#" + "\n" +
-					"#..............................#" + "\n" +
-					"################################" + "\n" +
-					"\n    (c) othello7 2019-2021");
+		{*/
+			TextBoxReplace(
+"        Version RockBox  \n################################\n#..............................#\n#.........@@@@@@@@@@@@.........#\n#.........@ Press Up @.........#\n#.........@@@@@@@@@@@@.........#\n#..............................#\n################################\n\n    (c) othello7 2019-2021"
+					);
 			//Start Screen
 			//Animations.PlayAnimatedStartScreen();
-		}
+		//}
 
 		if (IsKeyDown(0))
 		{
@@ -1684,7 +1592,7 @@ static void StartScreen()
 	//music.PlayMusic();
 }
 
-static void ConvertTwoPlayerMode()
+/*static void ConvertTwoPlayerMode()
 {
 	if (Mode == 3)
 		TwoPlayerMode = true;
@@ -1711,7 +1619,7 @@ static bool Boolconvert(char* setting)
 	return boolean;
 }
 static void ImportHighScore()
-{/*
+{
 	if (loadsuccess)
 	{
 		try
@@ -1751,11 +1659,11 @@ static void ImportHighScore()
 			Console.Beep();
 			DoSleep(777);
 		}
-	}*/
+	}
 }
 
 //AGAIN whats with all this elden code?
-/*static string Code(string Input)
+static string Code(string Input)
 {
 	char[] charArray = Input.ToCharArray();
 
@@ -1770,10 +1678,10 @@ static void ImportHighScore()
 
 	string b = new string(charArray);
 	return b;
-}*/
+}
 
 static void Cutscene()
-{/*
+{
 	ZoomTextBox(ZoomTextBox() / 1.5f, true);
 
 
@@ -1802,7 +1710,102 @@ static void Cutscene()
 			DoSleep(100);
 		DoSleep(100);
 	}
-	ZoomTextBox(ZoomTextBox() * 1.5f);*/
+	ZoomTextBox(ZoomTextBox() * 1.5f);
+}*/
+
+//Display&Delay
+static void DisplayAndDelay(void)
+{
+	//Display
+	WriteToScreen();
+	TextBoxReplaceRtf(WriteBoard);
+	//BenchFPS.OnMapUpdated();
+
+	//Delay
+	if (GodMode == false)
+		Score += 1;
+	TimerCounter += 1;
+	UpdateDificultyCurve();
+	if (Score > HighScore)
+		HighScore = Score;
+}
+
+static void Run(void){
+	//Run
+	while (Refresh){
+
+		TestKeydowns();
+
+		PositionPlayers();
+
+		/*if (ScoreFlashTimer <= TimerCounter && ScoreFlashTimer > TimerCounter - 10 &&
+				ColorMode == true && TimerCounter > 20)
+			InitStringBuilder(ConsoleColor.Magenta);
+		else
+			InitStringBuilder(ConsoleColor.White);
+*/
+		BlockHandling();
+
+
+		WriteBoard = Stringbuilder;
+
+		DisplayAndDelay();
+
+		//DiscordDB.Update();
+		DoSleep(Tick);
+	}
+}
+
+static void Game(void)
+{
+	rb->lcd_clear_display();
+	TextBoxWriteLine("Start!");
+	//init
+	TextBoxWriteLine("Initializing");
+	Initialize();
+	TextBoxWriteLine("Setting Colors");
+	InitConsoleColors();
+	BlueBackground(false);
+
+	ImportSettings();
+
+	//InternetConnect();
+
+	//Start Screen
+	StartScreen();
+
+	//if (MuteMusic)
+	//	music.PauseMusic();
+
+	if (Mode > MaxMode)
+	{
+		Tick = 10;
+		Avatar = '%';
+		Avatar2 = '$';
+		Backdrop = 'O';
+		BonusPoint = '.';
+	}
+
+
+
+	Run();
+
+
+
+	TextBoxWriteLineRtf("\nQuitting...");
+
+	/*if (MuteMusic == false)
+		music.TerminateMusic();
+	else
+	{
+		music.ResumeMusic();
+		music.TerminateMusic();
+	}
+
+	DiscordDB.die();*/
+
+	DoSleep(1000);
+	CloseThis();
 }
 
 /* this is
