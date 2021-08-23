@@ -25,18 +25,55 @@
 #include "plugin.h"
 #define AMP 32000
 
+static void printlines(char **mydata)
+{
+	char ** res  = NULL;
+	char * p = strtok (mydata, "\n");
+	int n_spaces = 0, i;
+	/* split string and append tokens to 'res' */
+	while (p) {
+		res = realloc (res, sizeof (char*) * ++n_spaces);
+		if (res == NULL)
+		  exit (-1);
+		res[n_spaces-1] = malloc(sizeof(char)*strlen(p));
+
+		rb->strcpy(res[n_spaces-1],p);
+
+	    p = rb->strtok_r(NULL, "\n");
+	}
+	/* realloc one extra element for the last NULL */
+	res = realloc (res, sizeof (char*) * (n_spaces+1));
+	res[n_spaces] = '\0';
+	/* print the result */
+	for (i = 0; i < (n_spaces+1); ++i)
+	    rb->lcd_putsf(i,0,"res[%d] = %s\n", i, res[i]);
+	/* free the memory allocated */
+	for(i = 0; i < n_spaces; i++)
+	    free(res[i]);
+	free(res);
+}
+
 static void bsleep(int time)
 {
+	rb->lcd_clear_display();
+	printlines("sleep\nsleep\nsleep");
+	rb->lcd_update();
+
 	rb->sleep(HZ * time / 1000);
 }
 
 static void beep(int freq, int time)
 {
+	rb->lcd_clear_display();
+	printlines("\n\nbeep\nbeep");
+	rb->lcd_update();
+
 	rb->beep_play(freq, (HZ/100)*time, AMP);
-	bsleep(time);
+	rb->sleep(HZ * time / 1000);
+	//bsleep(time);
 }
 
-static void playtune()
+static void playtune(void)
 {
 	beep(196,200);
 	beep(196,200);
