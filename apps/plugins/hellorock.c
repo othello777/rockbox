@@ -25,48 +25,35 @@
 #include "plugin.h"
 #define AMP 32000
 
-static void printlines(char **mydata)
+static void printlines(char *input)
 {
-	char ** res  = NULL;
-	char * p = strtok (mydata, "\n");
-	int n_spaces = 0, i;
-	/* split string and append tokens to 'res' */
-	while (p) {
-		res = realloc (res, sizeof (char*) * ++n_spaces);
-		if (res == NULL)
-		  exit (-1);
-		res[n_spaces-1] = malloc(sizeof(char)*strlen(p));
+	char str[rb->strlen(input)];
+	rb->strcpy(str, input);
+	char *save;
+	char delim[] = "\n";
 
-		rb->strcpy(res[n_spaces-1],p);
+	char *ptr = rb->strtok_r(str, delim, &save);
 
-	    p = rb->strtok_r(NULL, "\n");
+	int line = 0;
+	rb->lcd_clear_display();
+	while(ptr != NULL)
+	{
+		rb->lcd_puts(0, line, ptr);
+		ptr = rb->strtok_r(NULL, delim, &save);
+		line = line + 1;
 	}
-	/* realloc one extra element for the last NULL */
-	res = realloc (res, sizeof (char*) * (n_spaces+1));
-	res[n_spaces] = '\0';
-	/* print the result */
-	for (i = 0; i < (n_spaces+1); ++i)
-	    rb->lcd_putsf(i,0,"res[%d] = %s\n", i, res[i]);
-	/* free the memory allocated */
-	for(i = 0; i < n_spaces; i++)
-	    free(res[i]);
-	free(res);
+	rb->lcd_update();
 }
 
 static void bsleep(int time)
 {
-	rb->lcd_clear_display();
 	printlines("sleep\nsleep\nsleep");
-	rb->lcd_update();
-
 	rb->sleep(HZ * time / 1000);
 }
 
 static void beep(int freq, int time)
 {
-	rb->lcd_clear_display();
 	printlines("\n\nbeep\nbeep");
-	rb->lcd_update();
 
 	rb->beep_play(freq, (HZ/100)*time, AMP);
 	rb->sleep(HZ * time / 1000);
