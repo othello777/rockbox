@@ -7,7 +7,7 @@
  *                     \/            \/     \/    \/            \/
  * $Id$
  *
- * Copyright (C) 2002 Björn Stenberg
+ * Copyright (C) 2021 othello7
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -19,11 +19,23 @@
  *
  ****************************************************************************/
 
-/* welcome to the example rockbox plugin */
-
-/* mandatory include for all plugins */
+// mandatory include for all plugins
 #include "plugin.h"
 #define AMP 32000
+
+#define SCR_BACK 		BUTTON_SCROLL_BACK
+#define SCR_FWD 		BUTTON_SCROLL_FWD
+#define RFK_SELECT      BUTTON_SELECT
+#define RFK_UP          BUTTON_MENU
+#define RFK_DOWN        BUTTON_PLAY
+#define RFK_RIGHT       BUTTON_RIGHT
+#define RFK_LEFT        BUTTON_LEFT
+
+static char slog[7][23];
+static int initfill = 0;
+static int vl = 5;
+static bool q = false;
+//static int textlimit = 40;
 
 static void printlines(char *input)
 {
@@ -45,19 +57,86 @@ static void printlines(char *input)
 	rb->lcd_update();
 }
 
+static void addlog(char *line)
+{
+	//puts("log1");
+	if(initfill > vl - 1)
+	{
+		//puts("log2");
+		int n = 1;
+		while(n <= vl)
+		{
+			rb->strcpy(slog[n - 1], slog[n]);
+			n = n + 1;
+		}
+		rb->strcpy(slog[vl], line);
+
+		rb->strcpy(slog[initfill], line);
+		char lined[127] = "";
+		int i = 0;
+		while(i <= vl)
+		{
+			rb->strcat(lined, "\n");
+			rb->strcat(lined, slog[i]);
+			i = i + 1;
+		}
+		printlines(lined);
+	}
+	else
+	{
+		//puts("log3");
+		rb->strcpy(slog[initfill], line);
+		char lined[40] = "";
+		int i = 0;
+		//puts("log4");
+		while(i <= vl)
+		{
+			rb->strcat(lined, "\n");
+			rb->strcat(lined, slog[i]);
+			i = i + 1;
+		}
+		//puts("log5");
+		printlines(lined);
+		initfill = initfill + 1;
+	}
+}
+
+static void quitcheck(void)
+{
+	if(rb->button_status() == RFK_UP || rb->button_status() == RFK_LEFT)
+	{
+		addlog("quitting");
+		q = true;
+	}
+}
+
 static void bsleep(int time)
 {
-	printlines("sleep\nsleep\nsleep");
+	quitcheck();
+	if(q)
+			return;
+	char prin[11] = "sleep";
+	//int *ls = {(int)time};
+	rb->snprintf(prin, 10, "sleep %d", time);
+	addlog(prin);
 	rb->sleep(HZ * time / 1000);
 }
 
 static void beep(int freq, int time)
 {
-	printlines("\n\nbeep\nbeep");
+	quitcheck();
+	if(q)
+		return;
+	//char pre[20] = "";
+	char prin[23] = "";
+	rb->snprintf(prin, 22, "beep %d %d", time, freq);
+	//char prin[20] = "";
+	//rb->snprintf(prin, 19, "%d", freq);
+	//rb->strcat(pre, prin);
+	addlog(prin);
 
 	rb->beep_play(freq, (HZ/100)*time, AMP);
 	rb->sleep(HZ * time / 1000);
-	//bsleep(time);
 }
 
 static void playtune(void)
@@ -464,23 +543,21 @@ static void playtune(void)
 	bsleep(1400);
 }
 
-/* this is
- *the plugin entry point */
+// this is the plugin entry point
 enum plugin_status plugin_start(const void* parameter)
 {
     /* if you don't use the parameter, you can do like
        this to avoid the compiler warning about it */
     (void)parameter;
-    //rb->keyclick_click();
-    rb->splash(HZ, "Sing me a song");
+
+    rb->splash(HZ/2, "Sing me a song");
 
     playtune();
 
-    /* "rb->" marks a plugin api call. Rockbox offers many of its built-in
-     * functions to plugins */
-    /* now go ahead and have fun! */
+    // "rb->" marks a plugin api call. Rockbox offers many of its built-in functions to plugins
+    // now go ahead and have fun!
     rb->splash(HZ*2, "Hello Rockbox~!");
 
-    /* tell Rockbox that we have completed successfully */
+    // tell Rockbox that we have completed successfully
     return PLUGIN_OK;
 }
