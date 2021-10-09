@@ -19,10 +19,10 @@
  *
  ****************************************************************************/
 #include "plugin.h"
-#include "lib/display_text.h"
-#include "lib/mylcd.h"
+//#include "lib/display_text.h"
+//#include "lib/mylcd.h"
 
-extern const fb_data rockblox_background[];
+extern const fb_data othellotale_human[];
 
 enum plugin_status plugin_start(const void* parameter)
 {
@@ -30,7 +30,7 @@ enum plugin_status plugin_start(const void* parameter)
        this to avoid the compiler warning about it */
     (void)parameter;
     rb->lcd_clear_display();
-    rb->lcd_bitmap(rockblox_background, 0, 0, 160, 128);
+    rb->lcd_bitmap(othellotale_human, 0, 0, 160, 128);
     rb->lcd_update();
     rb->sleep(HZ*3);
     rb->splash(HZ*2, "howdy!");
