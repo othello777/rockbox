@@ -1,5 +1,5 @@
 /*othellotale*/
-othellotale_human.bmp
+othellotale_human.19x31.bmp
 
 /* 2048 */
 #define MIN(x,y) ((x<y)?x:y)
