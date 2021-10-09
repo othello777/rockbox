@@ -1,5 +1,6 @@
 /* plugins common to all models */
 othellotale.c
+pills.c
 dodgeblock.c
 helloworld.c
 hellorock.c
