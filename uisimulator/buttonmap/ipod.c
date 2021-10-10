@@ -55,7 +55,7 @@ int key_to_button(int keyboard_button)
             new_btn = BUTTON_SELECT;
             break;
         case SDLK_KP_PERIOD:
-        case SDLK_INSERT:
+        case SDLK_LALT:
             new_btn = BUTTON_MENU;
             break;
         case SDL_BUTTON_WHEELUP:
