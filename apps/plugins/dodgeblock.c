@@ -1866,8 +1866,7 @@ static void Game(void)
 	//CloseThis();
 }
 
-/* this is
- *the plugin entry point */
+/* this is the plugin entry point */
 enum plugin_status plugin_start(const void* parameter)
 {
     /* if you don't use the parameter, you can do like
