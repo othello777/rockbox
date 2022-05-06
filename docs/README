@@ -3,6 +3,7 @@ I transcoded all of the main DodgeBlock.cs into C code for the ipod.
 It runs on every device that rockbox supports because of the the text 
 interface I think but it hasnt been tested on all.
 
+*DodgeBlock is on testbranch branch!*
 
 _______________________________________________________________________
                __________               __   ___.
