@@ -1,3 +1,10 @@
+This is a fork of rockbox with dodgeblock.c added to it. 
+I transcoded all of the main DodgeBlock.cs into C code for the ipod. 
+It runs on every device that rockbox supports because of the the text 
+interface I think but it hasnt been tested on all.
+
+
+_______________________________________________________________________
                __________               __   ___.
      Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
      Source     |       _//  _ \_/ ___\|  |/ /| __ \ /  _ \  \/  /
