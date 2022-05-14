@@ -1,3 +1,23 @@
+This is a fork of rockbox with dodgeblock.c added to it. 
+I transcoded all of the main DodgeBlock.cs into C code for the ipod. 
+It runs on every device that rockbox supports because of the the text 
+interface I think but it hasnt been tested on all.
+
+*DodgeBlock is on testbranch branch!*
+
+DodgeBlock website: https://dodgeblock.cf
+## Features
+- [x] Normal Mode (partial)
+- [ ] All Modes
+- [ ] Colors
+- [ ] Music
+- [ ] Settings Menu (Baisc)
+- [ ] New Settings Menu
+- [ ] Saving
+- [ ] New Control Style
+
+```
+_______________________________________________________________________
                __________               __   ___.
      Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
      Source     |       _//  _ \_/ ___\|  |/ /| __ \ /  _ \  \/  /
@@ -62,3 +82,4 @@ directories and create a setup for each target:
    $ ../tools/configure
 
 Questions anyone? Ask on the mailing list or on IRC. We'll be happy to help you!
+```
