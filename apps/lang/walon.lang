@@ -5281,20 +5281,17 @@
   </voice>
 </phrase>
 <phrase>
-  id: LANG_RECORDING_FORMAT
-  desc: audio format item in recording menu
+  id: LANG_FORMAT
+  desc: audio format
   user: core
   <source>
-    *: none
-    recording: "Format"
+    *: "Format"
   </source>
   <dest>
-    *: none
-    recording: "Cogne"
+    *: "Cogne"
   </dest>
   <voice>
-    *: none
-    recording: "Cogne"
+    *: "Cogne"
   </voice>
 </phrase>
 <phrase>
@@ -10327,15 +10324,15 @@
   user: core
   <source>
     *: none
-    gigabeatfx,sansafuzeplus: "Touchpad Sensitivity"
+    fiiom3k,gigabeatfx,sansafuzeplus: "Touchpad Sensitivity"
   </source>
   <dest>
     *: none
-    gigabeatfx,sansafuzeplus: "Tinrûlisté do pavé-taprece"
+    fiiom3k,gigabeatfx,sansafuzeplus: "Tinrûlisté do pavé-taprece"
   </dest>
   <voice>
     *: none
-    gigabeatfx,sansafuzeplus: "Tinrûlisté do pavé-taprece"
+    fiiom3k,gigabeatfx,sansafuzeplus: "Tinrûlisté do pavé-taprece"
   </voice>
 </phrase>
 <phrase>

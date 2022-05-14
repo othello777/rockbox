@@ -270,6 +270,12 @@ simcc () {
    LDOPTS="$LDOPTS -fsanitize=address -lasan"
  fi
 
+ if [ "$ARG_UBSAN" = "1" ] ; then
+   echo "Using UBSan"
+   GCCOPTS="$GCCOPTS -fsanitize=undefined -fPIC"
+   LDOPTS="$LDOPTS -fsanitize=undefined"
+ fi
+
  # Some linux setups like to warn about unused results. They are correct,
  # but cleaning this up is a lot of work.
  GCCOPTS="$GCCOPTS -Wno-unused-result"
@@ -477,6 +483,9 @@ EOF
 
  # AddressSanitizer requires SDL threads
  if [ "$ARG_ADDR_SAN" = "1" ] ; then
+     ARG_THREAD_SUPPORT=1
+ fi
+ if [ "$ARG_UBSAN" = "1" ] ; then
      ARG_THREAD_SUPPORT=1
  fi
 
@@ -1429,6 +1438,7 @@ ARG_PREFIX="$PREFIX"
 ARG_THREAD_SUPPORT=
 ARG_32BIT=
 ARG_ADDR_SAN=
+ARG_UBSAN=
 err=
 for arg in "$@"; do
 	case "$arg" in
@@ -1452,6 +1462,7 @@ for arg in "$@"; do
         --no-sdl-threads)
                       ARG_THREAD_SUPPORT=0;;
         --with-address-sanitizer) ARG_ADDR_SAN=1;;
+        --with-ubsan) ARG_UBSAN=1;;
         --prefix=*)   ARG_PREFIX=`echo "$arg" | cut -d = -f 2`;;
         --compiler-prefix=*)   ARG_COMPILER_PREFIX=`echo "$arg" | cut -d = -f 2`;;
 		--help)       help;;
@@ -4054,7 +4065,7 @@ fi
     appextra="recorder:gui"
     plugins="yes"
     tool="$rootdir/tools/scramble -add=fiiom3k "
-    boottool="" # not used
+    boottool="$rootdir/tools/mkspl-x1000 -type=nand -ppb=2 -bpp=2 "
     output="rockbox.m3k"
     bootoutput="bootloader.m3k"
     sysfontbl="16-Terminus"
@@ -4078,7 +4089,7 @@ fi
     appextra="recorder:gui"
     plugins="yes"
     tool="$rootdir/tools/scramble -add=shq1 "
-    boottool="" # not used
+    boottool="$rootdir/tools/mkspl-x1000 -type=nand -ppb=2 -bpp=2 "
     output="rockbox.q1"
     bootoutput="bootloader.q1"
     sysfontbl="16-Terminus"
@@ -4102,7 +4113,7 @@ fi
     appextra="recorder:gui"
     plugins="yes"
     tool="$rootdir/tools/scramble -add=erosqnative "
-    boottool="" # not used
+    boottool="$rootdir/tools/mkspl-x1000 -type=nand -ppb=2 -bpp=2 "
     output="rockbox.erosq"
     bootoutput="bootloader.erosq"
     sysfontbl="16-Terminus"
@@ -4280,7 +4291,7 @@ fi
       toolset='';
       t_cpu='';
       GCCOPTS='';
-      extradefines="$extradefines  -DDEBUG"
+      extradefines="$extradefines  -DDEBUG -DWARBLE"
       output='warble.'${modelname};
       echo "Warble build selected"
       ;;
@@ -4432,6 +4443,8 @@ elif [ "$ARG_CCACHE" != "0" ]; then
   if test -n "$ccache"; then
     echo "Found and uses ccache ($ccache)"
   fi
+else
+  CCACHE_ARG="export CCACHE_DISABLE=true"
 fi
 
 # figure out the full path to the various commands if possible
@@ -4724,6 +4737,7 @@ export ANDROID_NDK_PATH=${ANDROID_NDK_PATH}
 export ANDROID_SDK_PATH=${ANDROID_SDK_PATH}
 export ANDROID_PLATFORM_VERSION=${ANDROID_PLATFORM_VERSION}
 export TOOLSET=${toolset}
+$CCACHE_ARG
 
 CONFIGURE_OPTIONS=${cmdline}
 

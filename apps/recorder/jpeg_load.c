@@ -2024,7 +2024,7 @@ int clip_jpeg_fd(int fd,
 #else
     struct jpeg *p_jpeg = (struct jpeg*)bm->data;
     int tmp_size = maxsize;
-    ALIGN_BUFFER(p_jpeg, tmp_size, sizeof(int));
+    ALIGN_BUFFER(p_jpeg, tmp_size, sizeof(long));
     /* not enough memory for our struct jpeg */
     if ((size_t)tmp_size < sizeof(struct jpeg))
         return -1;
@@ -2133,7 +2133,7 @@ int clip_jpeg_fd(int fd,
     char *buf_end = (char *)bm->data + maxsize;
     maxsize = buf_end - buf_start;
 #ifndef JPEG_FROM_MEM
-    ALIGN_BUFFER(buf_start, maxsize, sizeof(uint32_t));
+    ALIGN_BUFFER(buf_start, maxsize, sizeof(long));
     if (maxsize < (int)sizeof(struct jpeg))
         return -1;
     memmove(buf_start, p_jpeg, sizeof(struct jpeg));
@@ -2227,5 +2227,16 @@ int read_jpeg_fd(int fd,
     return clip_jpeg_fd(fd, 0, bm, maxsize, format, cformat);
 }
 #endif
+
+const size_t JPEG_DECODE_OVERHEAD =
+    /* Reserve an arbitrary amount for the decode buffer
+     * FIXME: Somebody who knows what they're doing should look at this */
+    (32 * 1024)
+#ifndef JPEG_FROM_MEM
+    /* Unless the struct jpeg is defined statically, we need to allocate
+     * it in the bitmap buffer as well */
+    + sizeof(struct jpeg)
+#endif
+    ;
 
 /**************** end JPEG code ********************/

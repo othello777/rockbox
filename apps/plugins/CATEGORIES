@@ -27,6 +27,7 @@ clock,apps
 codebuster,games
 credits,viewers
 cube,demos
+db_folder_select,viewers
 demystify,demos
 dice,games
 dict,apps
@@ -51,7 +52,9 @@ jackpot,games
 jewels,games
 jpeg,viewers
 keybox,apps
+keyremap,apps
 lamp,apps
+lastfm_scrobbler,apps
 logo,demos
 lrcplayer,apps
 lua,viewers
@@ -71,6 +74,7 @@ minesweeper,games
 mosaique,demos
 mp3_encoder,apps
 mpegplayer,viewers
+multiboot_select,apps
 nim,games
 open_plugins,viewers
 oscilloscope,demos
@@ -81,6 +85,7 @@ pegbox,games
 periodic_table,apps
 pictureflow,demos
 pitch_detector,apps
+pitch_screen,viewers
 pixel-painter,games
 plasma,demos
 png,viewers
@@ -90,6 +95,7 @@ ppm,viewers
 properties,viewers
 quake,games
 random_folder_advance_config,apps
+rb_info,demos
 remote_control,apps
 resistor,apps
 reversi,games
@@ -172,6 +178,7 @@ test_disk,apps
 test_fps,apps
 test_grey,apps
 test_gfx,apps
+test_kbd,apps
 test_resize,apps
 test_sampr,apps
 test_scanrate,apps

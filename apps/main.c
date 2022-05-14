@@ -31,6 +31,7 @@
 #include "led.h"
 #include "../kernel-internal.h"
 #include "button.h"
+#include "core_keymap.h"
 #include "tree.h"
 #include "filetypes.h"
 #include "panic.h"
@@ -38,9 +39,7 @@
 #include "usb.h"
 #include "wifi.h"
 #include "powermgmt.h"
-#if !defined(DX50) && !defined(DX90)
 #include "adc.h"
-#endif
 #include "i2c.h"
 #ifndef DEBUG
 #include "serial.h"
@@ -71,7 +70,6 @@
 #include "string.h"
 #include "splash.h"
 #include "eeprom_settings.h"
-#include "scrobbler.h"
 #include "icon.h"
 #include "viewport.h"
 #include "skin_engine/skin_engine.h"
@@ -175,6 +173,15 @@ int main(void)
 #ifdef HAVE_USBSTACK
     /* All threads should be created and public queues registered by now */
     usb_start_monitoring();
+#endif
+
+#if !defined(DISABLE_ACTION_REMAP) && defined(CORE_KEYREMAP_FILE)
+    if (file_exists(CORE_KEYREMAP_FILE))
+    {
+        int mapct = core_load_key_remap(CORE_KEYREMAP_FILE);
+        if (mapct <= 0)
+            splashf(HZ, "key remap failed: %d,  %s", mapct, CORE_KEYREMAP_FILE);
+    }
 #endif
 
 #ifdef AUTOROCK
@@ -364,9 +371,6 @@ static void init(void)
     filetype_init();
     playlist_init();
     shortcuts_init();
-
-    if (global_settings.audioscrobbler)
-        scrobbler_init();
 
     audio_init();
     talk_announce_voice_invalid(); /* notify user w/ voice prompt if voice file invalid */
@@ -621,9 +625,6 @@ static void init(void)
     playlist_init();
     tree_mem_init();
     filetype_init();
-
-    if (global_settings.audioscrobbler)
-        scrobbler_init();
 
     shortcuts_init();
 

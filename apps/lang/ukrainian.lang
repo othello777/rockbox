@@ -5260,20 +5260,17 @@
   </voice>
 </phrase>
 <phrase>
-  id: LANG_RECORDING_FORMAT
-  desc: audio format item in recording menu
+  id: LANG_FORMAT
+  desc: audio format
   user: core
   <source>
-    *: none
-    recording: "Format"
+    *: "Format"
   </source>
   <dest>
-    *: none
-    recording: "Формат"
+    *: "Формат"
   </dest>
   <voice>
-    *: none
-    recording: "Формат"
+    *: "Формат"
   </voice>
 </phrase>
 <phrase>
@@ -10308,15 +10305,15 @@
   user: core
   <source>
     *: none
-    gigabeatfx,sansafuzeplus: "Touchpad Sensitivity"
+    fiiom3k,gigabeatfx,sansafuzeplus: "Touchpad Sensitivity"
   </source>
   <dest>
     *: none
-    gigabeatfx,sansafuzeplus: "Чутливiсть Тачпаду"
+    fiiom3k,gigabeatfx,sansafuzeplus: "Чутливiсть Тачпаду"
   </dest>
   <voice>
     *: none
-    gigabeatfx,sansafuzeplus: "Чутливiсть Тачпаду"
+    fiiom3k,gigabeatfx,sansafuzeplus: "Чутливiсть Тачпаду"
   </voice>
 </phrase>
 <phrase>

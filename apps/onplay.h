@@ -22,6 +22,7 @@
 #define _ONPLAY_H_
 
 int onplay(char* file, int attr, int from_screen, bool hotkey);
+int get_onplay_context(void);
 
 enum {
     ONPLAY_MAINMENU = -1,
@@ -51,6 +52,6 @@ enum hotkey_action {
 
 /* needed for the playlist viewer.. eventually clean this up */
 void onplay_show_playlist_cat_menu(char* track_name);
-void onplay_show_playlist_menu(char* path);
+void onplay_show_playlist_menu(const char* path, void (*playlist_insert_cb));
 
 #endif

@@ -56,6 +56,7 @@
  */
 
 /*#define LOGF_ENABLE*/
+/*#define LOGF_CLAUSES define to enable logf clause matching (LOGF_ENABLE req'd) */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -118,7 +119,7 @@ static long tempbuf_pos;
 static int tempbuf_handle;
 #endif
 
-#define SORTED_TAGS_COUNT 8
+#define SORTED_TAGS_COUNT 9
 #define TAGCACHE_IS_UNIQUE(tag) (BIT_N(tag) & TAGCACHE_UNIQUE_TAGS)
 #define TAGCACHE_IS_SORTED(tag) (BIT_N(tag) & TAGCACHE_SORTED_TAGS)
 #define TAGCACHE_IS_NUMERIC_OR_NONUNIQUE(tag) \
@@ -126,18 +127,47 @@ static int tempbuf_handle;
 /* Tags we want to get sorted (loaded to the tempbuf). */
 #define TAGCACHE_SORTED_TAGS ((1LU << tag_artist) | (1LU << tag_album) | \
     (1LU << tag_genre) | (1LU << tag_composer) | (1LU << tag_comment) | \
-    (1LU << tag_albumartist) | (1LU << tag_grouping) | (1LU << tag_title))
+    (1LU << tag_albumartist) | (1LU << tag_grouping) | (1LU << tag_title) | \
+    (1LU << tag_virt_canonicalartist))
 
 /* Uniqued tags (we can use these tags with filters and conditional clauses). */
 #define TAGCACHE_UNIQUE_TAGS ((1LU << tag_artist) | (1LU << tag_album) | \
     (1LU << tag_genre) | (1LU << tag_composer) | (1LU << tag_comment) | \
-    (1LU << tag_albumartist) | (1LU << tag_grouping))
+    (1LU << tag_albumartist) | (1LU << tag_grouping) | \
+    (1LU << tag_virt_canonicalartist))
 
 /* String presentation of the tags defined in tagcache.h. Must be in correct order! */
-static const char *tags_str[] = { "artist", "album", "genre", "title",
+static const char * const tags_str[] = { "artist", "album", "genre", "title",
     "filename", "composer", "comment", "albumartist", "grouping", "year",
-    "discnumber", "tracknumber", "bitrate", "length", "playcount", "rating",
-    "playtime", "lastplayed", "commitid", "mtime", "lastelapsed", "lastoffset" };
+    "discnumber", "tracknumber", "canonicalartist", "bitrate", "length",
+    "playcount", "rating", "playtime", "lastplayed", "commitid", "mtime",
+    "lastelapsed", "lastoffset"
+#if !defined(LOGF_ENABLE)
+};
+#define logf_clauses(...) do { } while(0)
+#elif defined(LOGF_CLAUSES) /* strings for logf debugging */
+    "tag_virt_basename", "tag_virt_length_min", "tag_virt_length_sec",
+    "tag_virt_playtime_min", "tag_virt_playtime_sec",
+    "tag_virt_entryage", "tag_virt_autoscore"
+};
+/* more debug strings */
+static const char * const tag_type_str[] = {
+    [clause_none] = "clause_none", [clause_is] = "clause_is",
+    [clause_is_not] = "clause_is_not", [clause_gt] = "clause_gt",
+    [clause_gteq] = "clause_gteq", [clause_lt] = "clause_lt",
+    [clause_lteq] = "clause_lteq", [clause_contains] = "clause_contains",
+    [clause_not_contains] = "clause_not_contains",
+    [clause_begins_with] = "clause_begins_with",
+    [clause_not_begins_with] = "clause_not_begins_with",
+    [clause_ends_with] = "clause_ends_with",
+    [clause_not_ends_with] = "clause_not_ends_with",
+    [clause_oneof] = "clause_oneof",
+    [clause_begins_oneof] = "clause_begins_oneof",
+    [clause_ends_oneof] = "clause_ends_oneof",
+    [clause_logical_or] = "clause_logical_or"
+ };
+#define logf_clauses logf
+#endif /* ndef LOGF_ENABLE */
 
 /* Status information of the tagcache. */
 static struct tagcache_stat tc_stat;
@@ -203,7 +233,7 @@ static const char * const tagfile_entry_ec   = "ll";
 /**
  Note: This should be (1 + TAG_COUNT) amount of l's.
  */
-static const char * const index_entry_ec     = "lllllllllllllllllllllll";
+static const char * const index_entry_ec     = "llllllllllllllllllllllll";
 
 static const char * const tagcache_header_ec = "lll";
 static const char * const master_header_ec   = "llllll";
@@ -323,7 +353,9 @@ static void allocate_tempbuf(void)
     if (tempbuf)
         tempbuf_size = size;
 #else /* !__PCTOOL__ */
-    tempbuf_handle = core_alloc_maximum("tc tempbuf", &size, NULL);
+    /* Need to pass dummy ops to prevent the buffer being moved
+     * out from under us, since we yield during the tagcache commit. */
+    tempbuf_handle = core_alloc_maximum("tc tempbuf", &size, &buflib_ops_locked);
     if (tempbuf_handle > 0)
     {
         tempbuf = core_get_data(tempbuf_handle);
@@ -438,7 +470,7 @@ static int open_master_fd(struct master_header *hdr, bool write)
 
     /* Check the header. */
     rc = read(fd, hdr, sizeof(struct master_header));
-    if (hdr->tch.magic == TAGCACHE_MAGIC && rc == sizeof(struct master_header))
+    if (rc == sizeof(struct master_header) && hdr->tch.magic == TAGCACHE_MAGIC)
     {
         /* Success. */
         return fd;
@@ -448,7 +480,7 @@ static int open_master_fd(struct master_header *hdr, bool write)
     lseek(fd, 0, SEEK_SET);
 
     rc = ecread(fd, hdr, 1, master_header_ec, true);
-    if (hdr->tch.magic != TAGCACHE_MAGIC || rc != sizeof(struct master_header))
+    if (rc != sizeof(struct master_header) || hdr->tch.magic != TAGCACHE_MAGIC)
     {
         logf("header error");
         tc_stat.ready = false;
@@ -994,6 +1026,7 @@ long tagcache_get_numeric(const struct tagcache_search *tcs, int tag)
 
 inline static bool str_ends_with(const char *str1, const char *str2)
 {
+    logf_clauses("%s %s %s", str1, __func__, str2);
     int str_len = strlen(str1);
     int clause_len = strlen(str2);
 
@@ -1005,6 +1038,7 @@ inline static bool str_ends_with(const char *str1, const char *str2)
 
 inline static bool str_oneof(const char *str, const char *list)
 {
+    logf_clauses("%s %s %s", str, __func__, list);
     const char *sep;
     int l, len = strlen(str);
 
@@ -1013,6 +1047,25 @@ inline static bool str_oneof(const char *str, const char *list)
         sep = strchr(list, '|');
         l = sep ? (intptr_t)sep - (intptr_t)list : (int)strlen(list);
         if ((l==len) && !strncasecmp(str, list, len))
+            return true;
+        list += sep ? l + 1 : l;
+    }
+
+    return false;
+}
+
+inline static bool str_begins_ends_oneof(const char *str, const char *list, bool begins)
+{
+    logf_clauses("%s %s (%s) %s", str, __func__, begins ? "begins" : "ends", list);
+    const char *sep;
+    int l, p, len = strlen(str);
+
+    while (*list)
+    {
+        sep = strchr(list, '|');
+        l = sep ? (intptr_t)sep - (intptr_t)list : (int)strlen(list);
+        p = begins ? 0 : len - l;
+        if (l <= len && !strncasecmp(&str[p], list, l))
             return true;
         list += sep ? l + 1 : l;
     }
@@ -1073,7 +1126,11 @@ static bool check_against_clause(long numeric, const char *str,
                 return !str_ends_with(str, clause->str);
             case clause_oneof:
                 return str_oneof(str, clause->str);
-
+            case clause_ends_oneof:
+                /* Fall-Through */
+            case clause_begins_oneof:
+                return str_begins_ends_oneof(str, clause->str,
+                                             clause->type == clause_begins_oneof);
             default:
                 logf("Incorrect tag: %d", clause->type);
         }
@@ -1097,10 +1154,17 @@ static bool check_clauses(struct tagcache_search *tcs,
         char *str = buf;
         struct tagcache_search_clause *clause = clauses[i];
 
+        logf_clauses("%s clause %d %s %s [%ld] %s",
+            "Checking",  i, tag_type_str[clause->type],
+            tags_str[clause->tag],  clause->numeric_data,
+            (clause->numeric || clause->str == NULL) ? "[NUMERIC?]" : clause->str);
+
         if (clause->type == clause_logical_or)
+        {
+            logf_clauses("Bailing");
             break; /* all conditions before logical-or satisfied --
                       stop processing clauses */
-
+        }
         seek = check_virtual_tags(clause->tag, tcs->idx_id, idx);
 
 #ifdef HAVE_TC_RAMCACHE
@@ -1185,6 +1249,11 @@ static bool check_clauses(struct tagcache_search *tcs,
 
             return false;
         }
+
+        logf_clauses("%s clause %d %s %s [%ld] %s",
+            "Found",  i, tag_type_str[clause->type],
+            tags_str[clause->tag],  clause->numeric_data,
+            (clause->numeric || clause->str == NULL) ? "[NUMERIC?]" : clause->str);
     }
 
     return true;
@@ -1204,7 +1273,7 @@ bool tagcache_check_clauses(struct tagcache_search *tcs,
     return check_clauses(tcs, &idx, clause, count);
 }
 
-static bool add_uniqbuf(struct tagcache_search *tcs, unsigned long id)
+static bool add_uniqbuf(struct tagcache_search *tcs, uint32_t id)
 {
     int i;
 
@@ -1219,7 +1288,10 @@ static bool add_uniqbuf(struct tagcache_search *tcs, unsigned long id)
     {
         /* Return false if entry is found. */
         if (tcs->unique_list[i] == id)
+        {
+            //logf("%d Exists @ %d", id, i);
             return false;
+        }
     }
 
     if (tcs->unique_list_count < tcs->unique_list_capacity)
@@ -1465,9 +1537,10 @@ bool tagcache_search(struct tagcache_search *tcs, int tag)
 void tagcache_search_set_uniqbuf(struct tagcache_search *tcs,
                                  void *buffer, long length)
 {
-    tcs->unique_list = (unsigned long *)buffer;
+    tcs->unique_list = (uint32_t *)buffer;
     tcs->unique_list_capacity = length / sizeof(*tcs->unique_list);
     tcs->unique_list_count = 0;
+    memset(tcs->unique_list, 0, tcs->unique_list_capacity);
 }
 
 bool tagcache_search_add_filter(struct tagcache_search *tcs,
@@ -1490,8 +1563,9 @@ bool tagcache_search_add_clause(struct tagcache_search *tcs,
                                 struct tagcache_search_clause *clause)
 {
     int i;
+    int clause_count = tcs->clause_count;
 
-    if (tcs->clause_count >= TAGCACHE_MAX_CLAUSES)
+    if (clause_count >= TAGCACHE_MAX_CLAUSES)
     {
         logf("Too many clauses");
         return false;
@@ -1499,13 +1573,19 @@ bool tagcache_search_add_clause(struct tagcache_search *tcs,
 
     if (clause->type != clause_logical_or)
     {
-        /* Check if there is already a similar filter in present (filters are
-         * much faster than clauses).
-         */
-        for (i = 0; i < tcs->filter_count; i++)
+        /* BUGFIX OR'd clauses seem to be mishandled once made into a filter */
+        if (clause_count <= 1 || tcs->clause[clause_count - 1]->type != clause_logical_or)
         {
-            if (tcs->filter_tag[i] == clause->tag)
-                return true;
+            /* Check if there is already a similar filter in present (filters are
+             * much faster than clauses).
+             */
+            for (i = 0; i < tcs->filter_count; i++)
+            {
+                if (tcs->filter_tag[i] == clause->tag)
+                {
+                    return true;
+                }
+            }
         }
 
         if (!TAGCACHE_IS_NUMERIC(clause->tag) && tcs->idxfd[clause->tag] < 0)
@@ -1689,6 +1769,11 @@ bool tagcache_get_next(struct tagcache_search *tcs)
         if (tcs->result_len > 1)
             return true;
     }
+
+#ifdef LOGF_ENABLE
+    if (tcs->unique_list_count > 0)
+        logf(" uniqbuf: %d used / %d avail", tcs->unique_list_count, tcs->unique_list_capacity);
+#endif
 
     return false;
 }
@@ -1896,7 +1981,7 @@ static void NO_INLINE add_tagcache(char *path, unsigned long mtime)
     char tracknumfix[3];
     int offset = 0;
     int path_length = strlen(path);
-    bool has_albumartist;
+    bool has_artist;
     bool has_grouping;
 
 #ifdef SIMULATOR
@@ -1996,8 +2081,8 @@ static void NO_INLINE add_tagcache(char *path, unsigned long mtime)
     entry.tag_offset[tag_mtime] = mtime;
 
     /* String tags. */
-    has_albumartist = id3.albumartist != NULL
-        && strlen(id3.albumartist) > 0;
+    has_artist = id3.artist != NULL
+        && strlen(id3.artist) > 0;
     has_grouping = id3.grouping != NULL
         && strlen(id3.grouping) > 0;
 
@@ -2008,13 +2093,14 @@ static void NO_INLINE add_tagcache(char *path, unsigned long mtime)
     ADD_TAG(entry, tag_genre, &id3.genre_string);
     ADD_TAG(entry, tag_composer, &id3.composer);
     ADD_TAG(entry, tag_comment, &id3.comment);
-    if (has_albumartist)
+    ADD_TAG(entry, tag_albumartist, &id3.albumartist);
+    if (has_artist)
     {
-        ADD_TAG(entry, tag_albumartist, &id3.albumartist);
+        ADD_TAG(entry, tag_virt_canonicalartist, &id3.artist);
     }
     else
     {
-        ADD_TAG(entry, tag_albumartist, &id3.artist);
+        ADD_TAG(entry, tag_virt_canonicalartist, &id3.albumartist);
     }
     if (has_grouping)
     {
@@ -2037,13 +2123,14 @@ static void NO_INLINE add_tagcache(char *path, unsigned long mtime)
     write_item(id3.genre_string);
     write_item(id3.composer);
     write_item(id3.comment);
-    if (has_albumartist)
+    write_item(id3.albumartist);
+    if (has_artist)
     {
-        write_item(id3.albumartist);
+        write_item(id3.artist);
     }
     else
     {
-        write_item(id3.artist);
+        write_item(id3.albumartist);
     }
     if (has_grouping)
     {
@@ -2171,17 +2258,12 @@ static int tempbuf_sort(int fd)
         while (idlist->next != NULL)
             idlist = idlist->next;
 
+        ALIGN_BUFFER(tempbuf_pos, tempbuf_left, alignof(struct tempbuf_id_list));
         tempbuf_left -= sizeof(struct tempbuf_id_list);
-        if (tempbuf_left - 4 < 0)
+        if (tempbuf_left < 0)
             return -1;
 
         idlist->next = (struct tempbuf_id_list *)&tempbuf[tempbuf_pos];
-        if (tempbuf_pos & 0x03)
-        {
-            tempbuf_pos = (tempbuf_pos & ~0x03) + 0x04;
-            tempbuf_left -= 3;
-            idlist->next = (struct tempbuf_id_list *)&tempbuf[tempbuf_pos];
-        }
         tempbuf_pos += sizeof(struct tempbuf_id_list);
 
         idlist = idlist->next;
@@ -3902,6 +3984,7 @@ static bool check_event_queue(void)
     {
         case Q_STOP_SCAN:
         case SYS_POWEROFF:
+        case SYS_REBOOT:
         case SYS_USB_CONNECTED:
             return true;
     }
@@ -3921,13 +4004,13 @@ static void fix_ramcache(void* old_addr, void* new_addr)
 
 static int move_cb(int handle, void* current, void* new)
 {
+    (void)handle;
     if (tcramcache.move_lock > 0)
         return BUFLIB_CB_CANNOT_MOVE;
 
     fix_ramcache(current, new);
     tcramcache.hdr = new;
     return BUFLIB_CB_OK;
-    (void)handle;
 }
 
 static struct buflib_callbacks ops = {
@@ -4857,6 +4940,7 @@ static void tagcache_thread(void)
                 break ;
 
             case SYS_POWEROFF:
+            case SYS_REBOOT:
                 break ;
 
             case SYS_USB_CONNECTED:

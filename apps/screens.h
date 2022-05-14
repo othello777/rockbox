@@ -23,6 +23,7 @@
 
 #include "config.h"
 #include "timefuncs.h"
+#include "metadata.h"
 
 struct screen;
 
@@ -35,11 +36,10 @@ int mmc_remove_request(void);
 #endif
 
 #if CONFIG_RTC
-bool set_time_screen(const char* title, struct tm *tm);
+bool set_time_screen(const char* title, struct tm *tm, bool set_date);
 #endif
 
-bool shutdown_screen(void);
-bool browse_id3(void);
+bool browse_id3(struct mp3entry *id3, int playlist_display_index, int playlist_amount);
 int  view_runtime(void);
 
 #ifdef HAVE_TOUCHSCREEN

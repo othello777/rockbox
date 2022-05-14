@@ -26,7 +26,9 @@
 #include "font.h"
 #include "lcd.h"
 #include "file.h"
+#ifdef HAVE_BOOTLOADER_USB_MODE
 #include "usb.h"
+#endif
 #include "system.h"
 #include "button.h"
 #include "common.h"
@@ -41,12 +43,33 @@
 
 #include "xdebug.h"
 
+#define SHOW_LOGO
+
 extern void show_logo(void);
 extern void power_off(void);
+
+static int lcd_inited = 0;
+void init_lcd(void)
+{
+    if(lcd_inited)
+        return;
+
+    lcd_init();
+    font_init();
+    lcd_setfont(FONT_SYSFIXED);
+
+    lcd_clear_display();
+    lcd_update();
+
+    backlight_init();
+
+    lcd_inited = true;
+}
 
 #ifdef HAVE_BOOTLOADER_USB_MODE
 static void show_splash(int timeout, const char *msg)
 {
+    init_lcd();
     reset_screen();
     lcd_putsxy( (LCD_WIDTH - (SYSFONT_WIDTH * strlen(msg))) / 2,
                 (LCD_HEIGHT - SYSFONT_HEIGHT) / 2, msg);
@@ -55,74 +78,84 @@ static void show_splash(int timeout, const char *msg)
     sleep(timeout);
 }
 
+static int usb_inited = 0;
+
 static void usb_mode(void)
 {
-    int button;
+    int button = 0;
 
-    /* Init USB */
-    usb_init();
-    usb_start_monitoring();
+    /* Init USB, but only once */
+    if (!usb_inited) {
+        usb_init();
+        usb_start_monitoring();
+        usb_inited = 1;
+    }
 
-    /* Wait for threads to connect */
-    show_splash(HZ/2, "Waiting for USB");
+    init_lcd();
+    reset_screen();
 
-    while (1)
-    {
+    /* Wait for USB */
+    show_splash(0, "Waiting for USB");
+    while(1) {
         button = button_get_w_tmo(HZ/2);
-
+        if (button == BUTTON_POWER)
+            return;
         if (button == SYS_USB_CONNECTED)
             break; /* Hit */
     }
 
-    if (button == SYS_USB_CONNECTED)
-    {
-        /* Got the message - wait for disconnect */
-        show_splash(0, "Bootloader USB mode");
+    /* Got the message - wait for disconnect */
+    show_splash(0, "Bootloader USB mode");
 
-        usb_acknowledge(SYS_USB_CONNECTED_ACK);
+    usb_acknowledge(SYS_USB_CONNECTED_ACK);
 
-        while (1)
-        {
-            button = button_get(true);
-            if (button == SYS_USB_DISCONNECTED)
-                break;
-        }
+    while(1) {
+        button = button_get_w_tmo(HZ/2);
+        if (button == SYS_USB_DISCONNECTED)
+            break;
     }
+
+    show_splash(HZ*2, "USB disconnected");
 }
 #endif
+
+/* Jump to loaded binary */
+void exec(void* addr) __attribute__((noinline, noreturn, section(".icode")));
+
+void exec(void* addr)
+{
+    commit_discard_idcache();
+    typedef void(*entry_fn)(void) __attribute__((noreturn));
+    entry_fn fn = (entry_fn)addr;
+    fn();
+}
 
 static int boot_rockbox(void)
 {
     int rc;
-    void (*kernel_entry)(void);
 
-    printf("Mounting disk...\n");
+    printf("Mounting disk...");
 
-    while((rc = disk_mount_all()) <= 0)
-    {
+    while((rc = disk_mount_all()) <= 0) {
         verbose = true;
 #ifdef HAVE_BOOTLOADER_USB_MODE
         error(EDISK, rc, false);
-        usb_start_monitoring();
         usb_mode();
 #else
         error(EDISK, rc, true);
 #endif
     }
 
-    printf("Loading firmware...\n");
+    printf("Loading firmware...");
     rc = load_firmware((unsigned char *)CONFIG_SDRAM_START, BOOTFILE, 0x400000);
-    if(rc <= EFILE_EMPTY)
+    if(rc <= EFILE_EMPTY) {
+        printf("!! " BOOTFILE);
         return rc;
-    else
-    {
-        printf("Starting Rockbox...\n");
+    } else {
+        printf("Starting Rockbox...");
         adc_close(); /* Disable SADC, seems to fix the re-init Rockbox does */
-
         disable_interrupt();
-        kernel_entry = (void*) CONFIG_SDRAM_START;
-        kernel_entry();
-
+        exec((void*) CONFIG_SDRAM_START);
         return 0; /* Shouldn't happen */
     }
 }
@@ -152,18 +185,24 @@ int main(void)
 
     serial_puts("\n\nSPL Stage 2\n\n");
 
+    system_init();
     kernel_init();
-    lcd_init();
-    font_init();
-    lcd_setfont(FONT_SYSFIXED);
-    button_init();
-    backlight_init();
 
+    init_lcd();
+#ifdef SHOW_LOGO
     show_logo();
+#endif
+
+    button_init();
+    enable_irq();
+
+    int btn = button_read_device();
+    if(btn & BUTTON_POWER) {
+       verbose = true;
+    }
 
     rc = storage_init();
-    if(rc)
-    {
+    if(rc) {
         verbose = true;
         error(EATA, rc, true);
     }
@@ -171,38 +210,28 @@ int main(void)
     filesystem_init();
 
 #ifdef HAVE_BOOTLOADER_USB_MODE
-    button_init_device();
-    int btn = button_read_device();
-
-    usb_init();
-
-    /* Enter USB mode if USB is plugged and PLAY button is pressed */
-    if(btn & BUTTON_PLAY) {
-        usb_start_monitoring();
-        if(usb_detect() == USB_INSERTED)
-            usb_mode();
+    /* Enter USB mode if USB is plugged and POWER button is pressed */
+    if (btn & BUTTON_POWER) {
+        usb_mode();
+        reset_screen();
     }
 #endif /* HAVE_BOOTLOADER_USB_MODE */
 
-    /* Don't mount the disks yet, there could be file system/partition errors
-       which are fixable in USB mode */
-
-    reset_screen();
-
-    printf(MODEL_NAME" Rockbox Bootloader\n");
-    printf("Version %s\n", rbversion);
+#ifndef SHOW_LOGO
+    printf(MODEL_NAME" Rockbox Bootloader");
+    printf("Version %s", rbversion);
+#endif
 
     rc = boot_rockbox();
 
-    if(rc <= EFILE_EMPTY)
-    {
+    if(rc <= EFILE_EMPTY) {
         verbose = true;
         printf("Error: %s", loader_strerror(rc));
     }
 
-    /* Halt */
-    while (1)
-        core_idle();
+    /* Power off */
+    sleep(5*HZ);
+    power_off();
 
     return 0;
 }

@@ -5241,20 +5241,17 @@
   </voice>
 </phrase>
 <phrase>
-  id: LANG_RECORDING_FORMAT
-  desc: audio format item in recording menu
+  id: LANG_FORMAT
+  desc: audio format
   user: core
   <source>
-    *: none
-    recording: "Format"
+    *: "Format"
   </source>
   <dest>
-    *: none
-    recording: "รูปแบบ"
+    *: "รูปแบบ"
   </dest>
   <voice>
-    *: none
-    recording: "Format"
+    *: "Format"
   </voice>
 </phrase>
 <phrase>
@@ -10237,15 +10234,15 @@
   user: core
   <source>
     *: none
-    gigabeatfx,sansafuzeplus: "Touchpad Sensitivity"
+    fiiom3k,gigabeatfx,sansafuzeplus: "Touchpad Sensitivity"
   </source>
   <dest>
     *: none
-    gigabeatfx,sansafuzeplus: "ความไวแผ่นสัมผัส"
+    fiiom3k,gigabeatfx,sansafuzeplus: "ความไวแผ่นสัมผัส"
   </dest>
   <voice>
     *: none
-    gigabeatfx,sansafuzeplus: "Touchpad Sensitivity"
+    fiiom3k,gigabeatfx,sansafuzeplus: "Touchpad Sensitivity"
   </voice>
 </phrase>
 <phrase>

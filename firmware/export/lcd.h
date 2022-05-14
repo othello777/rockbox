@@ -178,9 +178,12 @@ struct frame_buffer_t {
 
 #define VP_IS_RTL(vp) (((vp)->flags & VP_FLAG_ALIGNMENT_MASK) == VP_FLAG_ALIGN_RIGHT)
 
-#define VP_FLAG_VP_DIRTY 0x4000
-#define VP_FLAG_CLEAR_FLAG 0x8000
+#define VP_FLAG_OWNER_UPDATE 0x2000 /* block update_vp functions */
+#define VP_FLAG_VP_DIRTY     0x4000
+#define VP_FLAG_CLEAR_FLAG   0x8000
 #define VP_FLAG_VP_SET_CLEAN (VP_FLAG_CLEAR_FLAG | VP_FLAG_VP_DIRTY)
+/* flags set by viewport_set_defaults() */
+#define VP_DEFAULT_FLAGS (VP_FLAG_VP_DIRTY)
 
 struct viewport {
     int x;
@@ -507,7 +510,9 @@ typedef void lcd_blockfunc_type(fb_data *address, unsigned mask, unsigned bits);
 
 extern struct viewport* lcd_current_viewport;
 
-#define FBADDR(x,y) ((fb_data*) lcd_current_viewport->buffer->get_address_fn(x, y))
+#define FB_CURRENTVP_BUFFER (lcd_current_viewport->buffer)
+#define FBADDRBUF(buffer,x,y) ((fb_data*) buffer->get_address_fn(x,y))
+#define FBADDR(x,y) (FBADDRBUF(lcd_current_viewport->buffer,x,y))
 
 #define FRAMEBUFFER_SIZE (sizeof(fb_data)*LCD_FBWIDTH*LCD_FBHEIGHT)
 

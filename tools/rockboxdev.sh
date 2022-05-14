@@ -51,7 +51,7 @@ if [ -z $LINUX_MIRROR ] ; then
 fi
 
 # These are the tools this script requires and depends upon.
-reqtools="gcc bzip2 gzip make patch makeinfo automake libtool autoconf flex bison"
+reqtools="gcc g++ bzip2 gzip make patch makeinfo automake libtool autoconf flex bison"
 
 ##############################################################################
 # Functions:
@@ -889,7 +889,7 @@ do
             (cd $prefix/$target/sysroot/usr/include ; ln -sf ../lib/libffi-$libffi_ver/include/ffi.h . ;  ln -sf ../lib/libffi-$libffi_ver/include/ffitarget.h . )
 
             # build zlib
-	    zlib_ver="1.2.11"
+	    zlib_ver="1.2.12"
 	    gettool "zlib" "$zlib_ver"
 	    extract "zlib-$zlib_ver"
 	    CHOST=$target prefix="/usr" buildtool "zlib" "$zlib_ver" \

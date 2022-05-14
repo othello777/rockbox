@@ -127,6 +127,9 @@ static int curfile = -1, direction = DIR_NEXT, entries = 0;
 /* list of the supported image files */
 static char **file_pt;
 
+/* progress update tick */
+static long next_progress_tick;
+
 static const struct image_decoder *imgdec = NULL;
 static enum image_type image_type = IMAGE_UNKNOWN;
 
@@ -192,7 +195,11 @@ static int change_filename(int direct)
         return PLUGIN_ERROR;
     }
 
-    rb->strcpy(rb->strrchr(np_file, '/')+1, file_pt[curfile]);
+    size_t np_file_length = rb->strlen(np_file);
+    size_t np_file_name_length = rb->strlen(rb->strrchr(np_file, '/')+1);
+    size_t avail_length = sizeof(np_file) - (np_file_length - np_file_name_length);
+
+    rb->snprintf(rb->strrchr(np_file, '/')+1, avail_length, "%s", file_pt[curfile]);
 
     return PLUGIN_OTHER;
 }
@@ -428,7 +435,14 @@ static int ask_and_get_audio_buffer(const char *filename)
 /* callback updating a progress meter while image decoding */
 static void cb_progress(int current, int total)
 {
-    rb->yield(); /* be nice to the other threads */
+    /* do not yield or update the progress bar if we did so too recently */
+    long now = *rb->current_tick;
+    if(!TIME_AFTER(now, next_progress_tick))
+        return;
+
+    /* limit to 20fps */
+    next_progress_tick = now + HZ/20;
+
 #ifndef USEGSLIB
     /* in slideshow mode, keep gui interference to a minimum */
     const int size = (!iv_api.running_slideshow ? 8 : 4);
@@ -442,6 +456,8 @@ static void cb_progress(int current, int total)
                             total, 0, current, HORIZONTAL);
         rb->lcd_update_rect(0, LCD_HEIGHT-size, LCD_WIDTH, size);
     }
+
+    rb->yield(); /* be nice to the other threads */
 }
 
 #define VSCROLL (LCD_HEIGHT/8)
@@ -616,11 +632,19 @@ static int scroll_bmp(struct image_info *info)
 
         case IMGVIEW_UP:
         case IMGVIEW_UP | BUTTON_REPEAT:
+#ifdef IMGVIEW_SCROLL_UP
+        case IMGVIEW_SCROLL_UP:
+        case IMGVIEW_SCROLL_UP | BUTTON_REPEAT:
+#endif
             pan_view_up(info);
             break;
 
         case IMGVIEW_DOWN:
         case IMGVIEW_DOWN | BUTTON_REPEAT:
+#ifdef IMGVIEW_SCROLL_DOWN
+        case IMGVIEW_SCROLL_DOWN:
+        case IMGVIEW_SCROLL_DOWN | BUTTON_REPEAT:
+#endif
             pan_view_down(info);
             break;
 
@@ -915,7 +939,8 @@ static int load_and_show(char* filename, struct image_info *info)
             rb->lcd_update();
         }
 
-        mylcd_ub_clear_display();
+        if (frame == 0)
+            mylcd_ub_clear_display();
         imgdec->draw_image_rect(info, 0, 0,
                         info->width-info->x, info->height-info->y);
         mylcd_ub_update();
@@ -956,6 +981,7 @@ static int load_and_show(char* filename, struct image_info *info)
                     get_view(info, &cx, &cy);
                     cx /= zoom; /* prepare the position in the new image */
                     cy /= zoom;
+                    mylcd_ub_clear_display();
                 }
                 else
                     continue;
@@ -968,6 +994,10 @@ static int load_and_show(char* filename, struct image_info *info)
             break;
         }
 
+#ifdef USEGSLIB
+        if (info->frames_count <= 1)
+            grey_show(false); /* switch off overlay */
+#endif
         rb->lcd_clear_display();
     }
     while (status > PLUGIN_OTHER);

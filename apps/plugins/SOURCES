@@ -4,18 +4,24 @@ helloworld.c
 #if !defined(SIMULATOR) && (CONFIG_BATTERY_MEASURE != 0)
 battery_bench.c
 #endif
+#ifdef HAVE_TAGCACHE
+db_folder_select.c
+#endif
 chessclock.c
 credits.c
 cube.c
 dict.c
 jackpot.c
 keybox.c
+keyremap.c
+lastfm_scrobbler.c
 logo.c
 lrcplayer.c
 mosaique.c
 main_menu_config.c
 properties.c
 random_folder_advance_config.c
+rb_info.c
 rockblox.c
 search.c
 settings_dumper.c
@@ -48,6 +54,10 @@ lamp.c
 
 #if defined(HAVE_RECORDING) && (defined(HAVE_LINE_IN) || defined(HAVE_MIC_IN))
 pitch_detector.c
+#endif
+
+#ifdef HAVE_PITCHCONTROL
+pitch_screen.c
 #endif
 
 mp3_encoder.c
@@ -150,6 +160,11 @@ wormlet.c
 announce_status.c
 #endif
 
+/* can't build in the sim for some reason */
+#if defined(HAVE_MULTIBOOT) && !defined(SIMULATOR)
+multiboot_select.c
+#endif
+
 
 /* Plugins needing the grayscale lib on low-depth LCDs */
 fire.c
@@ -196,6 +211,7 @@ test_core_jpeg.c
 test_disk.c
 test_fps.c
 test_gfx.c
+test_kbd.c
 #if LCD_DEPTH < 4 && !defined(SIMULATOR)
 test_scanrate.c
 #endif

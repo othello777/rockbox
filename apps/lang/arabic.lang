@@ -14,6 +14,8 @@
 # This software is distributed on an "AS IS" basis, WITHOUT WARRANTY OF ANY
 # KIND, either express or implied.
 #
+# LANGUAGE_IS_RTL
+#
 # Arabic language file, translated by:
 # - Mohamed Tarek
 # - Raafat Akkad
@@ -764,20 +766,17 @@
   </voice>
 </phrase>
 <phrase>
-  id: LANG_RECORDING_FORMAT
-  desc: audio format item in recording menu
+  id: LANG_FORMAT
+  desc: audio format
   user: core
   <source>
-    *: none
-    recording: "Format"
+    *: "Format"
   </source>
   <dest>
-    *: none
-    recording: "الصيغة"
+    *: "الصيغة"
   </dest>
   <voice>
-    *: none
-    recording: "Format"
+    *: "Format"
   </voice>
 </phrase>
 <phrase>
@@ -4043,15 +4042,15 @@
   user: core
   <source>
     *: none
-    gigabeatfx,sansafuzeplus: "Touchpad Sensitivity"
+    fiiom3k,gigabeatfx,sansafuzeplus: "Touchpad Sensitivity"
   </source>
   <dest>
     *: none
-    gigabeatfx,sansafuzeplus: "حساسية اللمس"
+    fiiom3k,gigabeatfx,sansafuzeplus: "حساسية اللمس"
   </dest>
   <voice>
     *: none
-    gigabeatfx,sansafuzeplus: "Touchpad Sensitivity"
+    fiiom3k,gigabeatfx,sansafuzeplus: "Touchpad Sensitivity"
   </voice>
 </phrase>
 <phrase>

@@ -31,16 +31,18 @@
  tagcache.c and bump up the header version too.
  */
 enum tag_type { tag_artist = 0, tag_album, tag_genre, tag_title,
-    tag_filename, tag_composer, tag_comment, tag_albumartist, tag_grouping, tag_year, 
-    tag_discnumber, tag_tracknumber, tag_bitrate, tag_length, tag_playcount, tag_rating,
-    tag_playtime, tag_lastplayed, tag_commitid, tag_mtime, tag_lastelapsed,
-    tag_lastoffset,
+    tag_filename, tag_composer, tag_comment, tag_albumartist, tag_grouping, tag_year,
+    tag_discnumber, tag_tracknumber, tag_virt_canonicalartist, tag_bitrate, tag_length,
+    tag_playcount, tag_rating, tag_playtime, tag_lastplayed, tag_commitid, tag_mtime,
+    tag_lastelapsed, tag_lastoffset,
     /* Real tags end here, count them. */
     TAG_COUNT,
     /* Virtual tags */
-    tag_virt_basename, tag_virt_length_min, tag_virt_length_sec,
+    tag_virt_basename=TAG_COUNT,
+    tag_virt_length_min, tag_virt_length_sec,
     tag_virt_playtime_min, tag_virt_playtime_sec,
-    tag_virt_entryage, tag_virt_autoscore };
+    tag_virt_entryage, tag_virt_autoscore,
+    TAG_COUNT_ALL};
 
 /* Maximum length of a single tag. */
 #define TAG_MAXLEN (MAX_PATH*2)
@@ -52,7 +54,7 @@ enum tag_type { tag_artist = 0, tag_album, tag_genre, tag_title,
 #define IDX_BUF_DEPTH 64
 
 /* Tag Cache Header version 'TCHxx'. Increment when changing internal structures. */
-#define TAGCACHE_MAGIC  0x5443480f
+#define TAGCACHE_MAGIC  0x54434810
 
 /* Dump store/restore header version 'TCSxx'. */
 #define TAGCACHE_STATEFILE_MAGIC 0x54435301
@@ -125,7 +127,9 @@ enum tag_type { tag_artist = 0, tag_album, tag_genre, tag_title,
 enum clause { clause_none, clause_is, clause_is_not, clause_gt, clause_gteq,
     clause_lt, clause_lteq, clause_contains, clause_not_contains, 
     clause_begins_with, clause_not_begins_with, clause_ends_with,
-    clause_not_ends_with, clause_oneof, clause_logical_or };
+    clause_not_ends_with, clause_oneof,
+    clause_begins_oneof, clause_ends_oneof,
+    clause_logical_or };
 
 struct tagcache_stat {
     bool initialized;        /* Is tagcache currently busy? */
@@ -186,7 +190,7 @@ struct tagcache_search {
     int entry_count;
     bool valid;
     bool initialized;
-    unsigned long *unique_list;
+    uint32_t *unique_list;
     int unique_list_capacity;
     int unique_list_count;
 

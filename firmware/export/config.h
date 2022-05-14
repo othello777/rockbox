@@ -208,6 +208,8 @@
                                  Usually application ports, and only
                                  if the estimation is better that ours
                                  (which it probably is) */
+#define CURRENT_MEASURE     8 /* Target can report battery charge and/or
+                               * discharge current */
 /* CONFIG_LCD */
 #define LCD_SSD1815   1 /* as used by Sansa M200 and others */
 #define LCD_S1D15E06  3 /* as used by iRiver H100 series */
@@ -611,6 +613,9 @@ Lyre prototype 1 */
 /* keep this include after the target configs */
 #ifdef SIMULATOR
 #include "config/sim.h"
+#ifndef HAVE_POWEROFF_WHILE_CHARGING
+    #define HAVE_POWEROFF_WHILE_CHARGING
+#endif
 #endif
 
 #ifndef CONFIG_PLATFORM
@@ -709,15 +714,24 @@ Lyre prototype 1 */
 #define BATTERY_CAPACITY_DEFAULT 0
 #endif
 
+#ifndef BATTERY_CAPACITY_MIN
+#define BATTERY_CAPACITY_MIN BATTERY_CAPACITY_DEFAULT
+#endif
+
+#ifndef BATTERY_CAPACITY_MAX
+#define BATTERY_CAPACITY_MAX BATTERY_CAPACITY_DEFAULT
+#endif
+
 #ifndef BATTERY_CAPACITY_INC
 #define BATTERY_CAPACITY_INC 0
 #endif
 
 #ifdef HAVE_RDS_CAP
 /* combinable bitflags */
-#define RDS_CFG_ISR     0x1 /* uses ISR to process packets */
+/* 0x01 can be reused, was RDS_CFG_ISR */
 #define RDS_CFG_PROCESS 0x2 /* uses raw packet processing */
 #define RDS_CFG_PUSH    0x4 /* pushes processed information */
+#define RDS_CFG_POLL    0x8 /* tuner driver provides a polling function */
 #ifndef CONFIG_RDS
 #define CONFIG_RDS  RDS_CFG_PROCESS /* thread processing+raw processing */
 #endif /* CONFIG_RDS */
@@ -853,6 +867,12 @@ Lyre prototype 1 */
 /* note to remove multi-partition booting this could be changed to MULTIDRIVE */
 #if defined(HAVE_BOOTDATA) && defined(BOOT_REDIR) && defined(HAVE_MULTIVOLUME)
 #define HAVE_MULTIBOOT
+#endif
+
+/* The lowest numbered volume to read a multiboot redirect from; default is to
+ * allow any volume but some targets may wish to exclude the internal drive. */
+#if defined(HAVE_MULTIBOOT) && !defined(MULTIBOOT_MIN_VOLUME)
+# define MULTIBOOT_MIN_VOLUME 0
 #endif
 
 #ifndef NUM_DRIVES
@@ -1172,20 +1192,26 @@ Lyre prototype 1 */
 /* Define the implemented USB transport classes */
 #if CONFIG_USBOTG == USBOTG_ISP1583
 #define USB_HAS_BULK
-#elif (CONFIG_USBOTG == USBOTG_ARC) || \
+#define USB_LEGACY_CONTROL_API
+#elif (CONFIG_USBOTG == USBOTG_DESIGNWARE)
+#define USB_HAS_BULK
+#define USB_HAS_INTERRUPT
+#elif (CONFIG_USBOTG == USBOTG_ARC) ||  \
     (CONFIG_USBOTG == USBOTG_JZ4740) || \
     (CONFIG_USBOTG == USBOTG_JZ4760) || \
     (CONFIG_USBOTG == USBOTG_M66591) || \
-    (CONFIG_USBOTG == USBOTG_DESIGNWARE) || \
     (CONFIG_USBOTG == USBOTG_AS3525) || \
     (CONFIG_USBOTG == USBOTG_RK27XX) || \
     (CONFIG_USBOTG == USBOTG_TNETV105)
 #define USB_HAS_BULK
 #define USB_HAS_INTERRUPT
+#define USB_LEGACY_CONTROL_API
 #elif defined(CPU_TCC780X)
 #define USB_HAS_BULK
+#define USB_LEGACY_CONTROL_API
 #elif CONFIG_USBOTG == USBOTG_S3C6400X
 #define USB_HAS_BULK
+#define USB_LEGACY_CONTROL_API
 //#define USB_HAS_INTERRUPT -- seems to be broken
 #endif /* CONFIG_USBOTG */
 
@@ -1260,6 +1286,10 @@ Lyre prototype 1 */
 #define PCM_SW_VOLUME_FRACBITS  (16)
 #endif /* SIMULATOR */
 #endif /* default SDL SW volume conditions */
+
+#if !defined(BOOTLOADER) || defined(HAVE_BOOTLOADER_SCREENDUMP)
+# define HAVE_SCREENDUMP
+#endif
 
 /* null audiohw setting macro for when codec header is included for reasons
    other than audio support */

@@ -51,6 +51,8 @@
 #include "option_select.h"
 #include "string-extra.h"
 
+static void eq_apply(void);
+
 /*
  * Utility functions
  */
@@ -67,6 +69,12 @@ const char* eq_precut_format(char* buffer, size_t buffer_size, int value, const 
     snprintf(buffer, buffer_size, "%s%d.%d %s", value == 0 ? " " : "-",
         value / EQ_USER_DIVISOR, value % EQ_USER_DIVISOR, unit);
     return buffer;
+}
+
+void eq_enabled_option_callback(bool enabled)
+{
+    (void)enabled;
+    eq_apply();
 }
 
 /*
@@ -666,7 +674,7 @@ int eq_menu_graphical(void)
             {
                 if (current_band == 0) {
                     start_item = 0;
-                } else if (current_band == 9) {
+                } else if (current_band == EQ_NUM_BANDS - 1) {
                     start_item = EQ_NUM_BANDS - nb_eq_sliders[i];
                 } else {
                     start_item = current_band - 1;

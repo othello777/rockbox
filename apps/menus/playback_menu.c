@@ -31,7 +31,6 @@
 #include "sound_menu.h"
 #include "kernel.h"
 #include "playlist.h"
-#include "scrobbler.h"
 #include "audio.h"
 #include "cuesheet.h"
 #include "misc.h"
@@ -92,6 +91,7 @@ MENUITEM_SETTING(buffer_margin, &global_settings.buffer_margin,
                  buffermargin_callback);
 #endif /*HAVE_DISK_STORAGE */
 MENUITEM_SETTING(fade_on_stop, &global_settings.fade_on_stop, NULL);
+MENUITEM_SETTING(single_mode, &global_settings.single_mode, NULL);
 MENUITEM_SETTING(party_mode, &global_settings.party_mode, NULL);
 
 #ifdef HAVE_CROSSFADE
@@ -149,26 +149,6 @@ MENUITEM_SETTING(spdif_enable, &global_settings.spdif_enable, NULL);
 MENUITEM_SETTING(next_folder, &global_settings.next_folder, NULL);
 MENUITEM_SETTING(constrain_next_folder,
                  &global_settings.constrain_next_folder, NULL);
-static int audioscrobbler_callback(int action,
-                                   const struct menu_item_ex *this_item,
-                                   struct gui_synclist *this_list)
-{
-    (void)this_item;
-    (void)this_list;
-    switch (action)
-    {
-        case ACTION_EXIT_MENUITEM: /* on exit */
-            if (!scrobbler_is_enabled() && global_settings.audioscrobbler)
-                scrobbler_init();
-
-            if(scrobbler_is_enabled() && !global_settings.audioscrobbler)
-                scrobbler_shutdown(false);
-            break;
-    }
-    return action;
-}
-MENUITEM_SETTING(audioscrobbler, &global_settings.audioscrobbler, audioscrobbler_callback);
-
 
 static int cuesheet_callback(int action,
                              const struct menu_item_ex *this_item,
@@ -200,6 +180,28 @@ MENUITEM_SETTING(pause_rewind, &global_settings.pause_rewind, NULL);
 MENUITEM_SETTING(play_frequency, &global_settings.play_frequency,
                  playback_callback);
 #endif
+#ifdef HAVE_ALBUMART
+static int albumart_callback(int action,
+                             const struct menu_item_ex *this_item,
+                             struct gui_synclist *this_list)
+{
+    (void)this_item;
+    (void)this_list;
+    static int initial_aa_setting;
+    switch (action)
+    {
+        case ACTION_ENTER_MENUITEM:
+            initial_aa_setting = global_settings.album_art;
+            break;
+        case ACTION_EXIT_MENUITEM: /* on exit */
+            if (initial_aa_setting != global_settings.album_art)
+                set_albumart_mode(global_settings.album_art);
+    }
+    return action;
+}
+MENUITEM_SETTING(album_art, &global_settings.album_art,
+                 albumart_callback);
+#endif
 
 MAKE_MENU(playback_settings,ID2P(LANG_PLAYBACK),0,
           Icon_Playback_menu,
@@ -208,7 +210,7 @@ MAKE_MENU(playback_settings,ID2P(LANG_PLAYBACK),0,
 #ifdef HAVE_DISK_STORAGE
           &buffer_margin,
 #endif
-          &fade_on_stop, &party_mode,
+          &fade_on_stop, &single_mode, &party_mode,
 
 #if defined(HAVE_CROSSFADE)
           &crossfade_settings_menu,
@@ -219,7 +221,7 @@ MAKE_MENU(playback_settings,ID2P(LANG_PLAYBACK),0,
 #ifdef HAVE_SPDIF_POWER
           &spdif_enable,
 #endif
-          &next_folder, &constrain_next_folder, &audioscrobbler, &cuesheet
+          &next_folder, &constrain_next_folder, &cuesheet
 #ifdef HAVE_HEADPHONE_DETECTION
          ,&unplug_menu
 #endif
@@ -229,6 +231,9 @@ MAKE_MENU(playback_settings,ID2P(LANG_PLAYBACK),0,
           ,&pause_rewind
 #ifdef HAVE_PLAY_FREQ
           ,&play_frequency
+#endif
+#ifdef HAVE_ALBUMART
+          ,&album_art
 #endif
          );
 

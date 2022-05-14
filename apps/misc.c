@@ -58,7 +58,6 @@
 #include "font.h"
 #include "splash.h"
 #include "tagcache.h"
-#include "scrobbler.h"
 #include "sound.h"
 #include "playlist.h"
 #include "yesno.h"
@@ -289,7 +288,8 @@ static void system_restore(void)
     tree_restore();
 }
 
-static bool clean_shutdown(void (*callback)(void *), void *parameter)
+static bool clean_shutdown(enum shutdown_type sd_type,
+                           void (*callback)(void *), void *parameter)
 {
     long msg_id = -1;
 
@@ -323,7 +323,10 @@ static bool clean_shutdown(void (*callback)(void *), void *parameter)
 #endif
             level = battery_level();
             if (level > 10 || level < 0)
-                splash(0, str(LANG_SHUTTINGDOWN));
+            {
+                if (global_settings.show_shutdown_message)
+                    splash(0, str(LANG_SHUTTINGDOWN));
+            }
             else
             {
                 msg_id = LANG_WARNING_BATTERY_LOW;
@@ -362,7 +365,6 @@ static bool clean_shutdown(void (*callback)(void *), void *parameter)
 #if defined(HAVE_RECORDING)
             audio_close_recording();
 #endif
-            scrobbler_shutdown(true);
 
             system_flush();
 #ifdef HAVE_EEPROM_SETTINGS
@@ -391,7 +393,7 @@ static bool clean_shutdown(void (*callback)(void *), void *parameter)
             voice_wait();
         }
 
-        shutdown_hw();
+        shutdown_hw(sd_type);
     }
     return false;
 }
@@ -604,8 +606,17 @@ long default_event_handler_ex(long event, void (*callback)(void *), void *parame
             return SYS_USB_CONNECTED;
 
         case SYS_POWEROFF:
-            if (!clean_shutdown(callback, parameter))
-                return SYS_POWEROFF;
+        case SYS_REBOOT:
+        {
+            enum shutdown_type sd_type;
+            if (event == SYS_POWEROFF)
+                sd_type = SHUTDOWN_POWER_OFF;
+            else
+                sd_type = SHUTDOWN_REBOOT;
+
+            if (!clean_shutdown(sd_type, callback, parameter))
+                return event;
+        }
             break;
 #if CONFIG_CHARGING
         case SYS_CHARGER_CONNECTED:
@@ -1381,6 +1392,24 @@ int split_string(char *str, const char split_char, char *vector[], const int vec
     return i;
 }
 
+/* returns match index from option list
+ * returns -1 if option was not found
+ * option list is array of char pointers with the final item set to null
+ * ex - const char * const option[] = { "op_a", "op_b", "op_c", NULL}
+ */
+int string_option(const char *option, const char *const oplist[], bool ignore_case)
+{
+    const char *op;
+    int (*cmp_fn)(const char*, const char*) = &strcasecmp;
+    if (!ignore_case)
+        cmp_fn = strcmp;
+    for (int i=0; (op=oplist[i]) != NULL; i++)
+    {
+        if (cmp_fn(op, option) == 0)
+            return i;
+    }
+    return -1;
+}
 
 /** Open a UTF-8 file and set file descriptor to first byte after BOM.
  *  If no BOM is present this behaves like open().

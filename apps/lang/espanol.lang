@@ -8699,20 +8699,17 @@
   </voice>
 </phrase>
 <phrase>
-  id: LANG_RECORDING_FORMAT
-  desc: audio format item in recording menu
+  id: LANG_FORMAT
+  desc: audio format
   user: core
   <source>
-    *: none
-    recording: "Format"
+    *: "Format"
   </source>
   <dest>
-    *: none
-    recording: "Formato"
+    *: "Formato"
   </dest>
   <voice>
-    *: none
-    recording: "Formato"
+    *: "Formato"
   </voice>
 </phrase>
 <phrase>
@@ -10219,15 +10216,15 @@
   user: core
   <source>
     *: none
-    gigabeatfx,sansafuzeplus: "Touchpad Sensitivity"
+    fiiom3k,gigabeatfx,sansafuzeplus: "Touchpad Sensitivity"
   </source>
   <dest>
     *: none
-    gigabeatfx,sansafuzeplus: "Sensibilidad de la superficie táctil"
+    fiiom3k,gigabeatfx,sansafuzeplus: "Sensibilidad de la superficie táctil"
   </dest>
   <voice>
     *: none
-    gigabeatfx,sansafuzeplus: "Sensibilidad de la superficie táctil"
+    fiiom3k,gigabeatfx,sansafuzeplus: "Sensibilidad de la superficie táctil"
   </voice>
 </phrase>
 <phrase>

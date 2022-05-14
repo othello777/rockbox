@@ -7,6 +7,7 @@ alarm_menu.c
 #endif
 abrepeat.c
 bookmark.c
+core_keymap.c
 debug_menu.c
 filetypes.c
 language.c
@@ -57,7 +58,6 @@ tree.c
 tagtree.c
 #endif
 filetree.c
-scrobbler.c
 #ifdef IPOD_ACCESSORY_PROTOCOL
 iap/iap-core.c
 iap/iap-lingo0.c

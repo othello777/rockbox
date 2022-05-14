@@ -59,6 +59,7 @@
 #define HAVE_TOUCHSCREEN
 #define HAVE_BUTTON_DATA
 #define HAVE_FT6x06
+#define FT6x06_NUM_POINTS 5
 #define HAVE_HEADPHONE_DETECTION
 
 /* Storage defines */
@@ -66,6 +67,7 @@
 #define HAVE_HOTSWAP
 #define HAVE_HOTSWAP_STORAGE_AS_MAIN
 #define HAVE_MULTIDRIVE
+#define HAVE_MULTIVOLUME
 #define NUM_DRIVES 1
 #define STORAGE_WANTS_ALIGN
 #define STORAGE_NEEDS_BOUNCE_BUFFER
@@ -75,7 +77,7 @@
 /* TODO: implement HAVE_RTC_ALARM */
 
 /* Power management */
-#define CONFIG_BATTERY_MEASURE (VOLTAGE_MEASURE)
+#define CONFIG_BATTERY_MEASURE (VOLTAGE_MEASURE|CURRENT_MEASURE)
 #define CONFIG_CHARGING        CHARGING_MONITOR
 #define HAVE_SW_POWEROFF
 
@@ -93,10 +95,13 @@
 #define BATTERY_CAPACITY_INC     0
 #define BATTERY_TYPES_COUNT      1
 
+/* Multiboot */
+#define HAVE_BOOTDATA
+#define BOOT_REDIR "rockbox_main.shanling_q1"
+
 /* USB support */
 #ifndef SIMULATOR
 #define CONFIG_USBOTG USBOTG_DESIGNWARE
-#define USB_DW_ARCH_SLAVE
 #define USB_DW_TURNAROUND 5
 #define HAVE_USBSTACK
 #define USB_VENDOR_ID 0x0525  /* Same as the xDuuo X3, for some reason. */
@@ -104,7 +109,18 @@
 #define USB_DEVBSS_ATTR __attribute__((aligned(32)))
 #define HAVE_USB_POWER
 #define HAVE_USB_CHARGING_ENABLE
+#define HAVE_USB_CHARGING_IN_THREAD
+#define TARGET_USB_CHARGING_DEFAULT USB_CHARGING_FORCE
 #define HAVE_BOOTLOADER_USB_MODE
+/* This appears to improve transfer performance (the default is 64 KiB).
+ * Going any higher doesn't help but we're still slower than the OF. */
+#define USB_READ_BUFFER_SIZE    (128 * 1024)
+#define USB_WRITE_BUFFER_SIZE   (128 * 1024)
+#endif
+
+#ifdef BOOTLOADER
+/* Ignore on any key can cause surprising USB issues in the bootloader */
+# define USBPOWER_BTN_IGNORE (~(BUTTON_PREV|BUTTON_NEXT))
 #endif
 
 /* Rockbox capabilities */
@@ -117,3 +133,4 @@
 #define HAVE_QUICKSCREEN
 #define HAVE_HOTKEY
 #define AB_REPEAT_ENABLE
+#define HAVE_BOOTLOADER_SCREENDUMP

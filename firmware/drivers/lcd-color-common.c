@@ -61,6 +61,7 @@ static struct viewport default_vp =
     .y        = 0,
     .width    = LCD_WIDTH,
     .height   = LCD_HEIGHT,
+    .flags    = 0,
     .font     = FONT_SYSFIXED,
     .drawmode = DRMODE_SOLID,
     .buffer   = NULL,
@@ -214,6 +215,7 @@ void lcd_drawline(int x1, int y1, int x2, int y2)
     int d, dinc1, dinc2;
     int x, xinc1, xinc2;
     int y, yinc1, yinc2;
+    int x_vp, y_vp, w_vp, h_vp;
     lcd_fastpixelfunc_type *pfunc = lcd_fastpixelfuncs[lcd_current_viewport->drawmode];
 
     deltay = abs(y2 - y1);
@@ -268,16 +270,23 @@ void lcd_drawline(int x1, int y1, int x2, int y2)
     x = x1;
     y = y1;
 
+    void *(*fbaddr)(int x, int y) = FB_CURRENTVP_BUFFER->get_address_fn;
+    x_vp = lcd_current_viewport->x;
+    y_vp = lcd_current_viewport->y;
+    w_vp = lcd_current_viewport->width;
+    h_vp = lcd_current_viewport->height;
+
     for (i = 0; i < numpixels; i++)
     {
-        if (   ((unsigned)x < (unsigned)lcd_current_viewport->width)
-            && ((unsigned)y < (unsigned)lcd_current_viewport->height)
+        if ((x >= 0 && y >= 0)
+            && (x < w_vp)
+            && (y < h_vp)
 #if defined(HAVE_VIEWPORT_CLIP)
-            && ((unsigned)x < (unsigned)LCD_WIDTH)
-            && ((unsigned)y < (unsigned)LCD_HEIGHT)
+            && (x < LCD_WIDTH)
+            && (y < LCD_HEIGHT)
 #endif
             )
-            pfunc(FBADDR(x + lcd_current_viewport->x, y + lcd_current_viewport->y));
+            pfunc(fbaddr( x + x_vp, y + y_vp));
 
         if (d < 0)
         {

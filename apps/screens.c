@@ -40,7 +40,6 @@
 #include "powermgmt.h"
 #include "talk.h"
 #include "misc.h"
-#include "metadata.h"
 #include "screens.h"
 #include "debug.h"
 #include "led.h"
@@ -124,7 +123,7 @@ static void say_time(int cursorpos, const struct tm *tm)
 #define OFF_YEAR    9
 #define OFF_DAY     14
 
-bool set_time_screen(const char* title, struct tm *tm)
+bool set_time_screen(const char* title, struct tm *tm, bool set_date)
 {
     struct viewport viewports[NB_SCREENS];
     bool done = false, usb = false;
@@ -139,6 +138,10 @@ bool set_time_screen(const char* title, struct tm *tm)
         offsets_ptr[IDX_YEAR] = OFF_DAY;
         offsets_ptr[IDX_DAY] = OFF_YEAR;
     }
+
+    int last_item = IDX_DAY; /*time & date*/
+    if (!set_date)
+        last_item = IDX_SECONDS; /*time*/
 
     /* speak selection when screen is entered */
     say_time(cursorpos, tm);
@@ -162,6 +165,7 @@ bool set_time_screen(const char* title, struct tm *tm)
         unsigned char buffer[20];
 #endif
         int *valptr = NULL;
+
         static unsigned char daysinmonth[] =
             {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
 
@@ -321,11 +325,11 @@ bool set_time_screen(const char* title, struct tm *tm)
         button = get_action(CONTEXT_SETTINGS_TIME, TIMEOUT_BLOCK);
         switch ( button ) {
             case ACTION_STD_PREV:
-                cursorpos = clamp_value_wrap(--cursorpos, 5, 0);
+                cursorpos = clamp_value_wrap(--cursorpos, last_item, 0);
                 say_time(cursorpos, tm);
                 break;
             case ACTION_STD_NEXT:
-                cursorpos = clamp_value_wrap(++cursorpos, 5, 0);
+                cursorpos = clamp_value_wrap(++cursorpos, last_item, 0);
                 say_time(cursorpos, tm);
                 break;
             case ACTION_SETTINGS_INC:
@@ -378,6 +382,7 @@ static const int id3_headers[]=
     LANG_ID3_YEAR,
     LANG_ID3_LENGTH,
     LANG_ID3_PLAYLIST,
+    LANG_FORMAT,
     LANG_ID3_BITRATE,
     LANG_ID3_FREQUENCY,
     LANG_ID3_TRACK_GAIN,
@@ -389,6 +394,8 @@ static const int id3_headers[]=
 struct id3view_info {
     struct mp3entry* id3;
     int count;
+    int playlist_display_index;
+    int playlist_amount;
     int info_id[ARRAYLEN(id3_headers)];
 };
 
@@ -588,15 +595,25 @@ static const char * id3_get_or_speak_info(int selected_item, void* data,
                     talk_value(id3->length /1000, UNIT_TIME, true);
                 break;
             case LANG_ID3_PLAYLIST:
+                if (info->playlist_display_index == 0 || info->playlist_amount == 0 )
+                    return NULL;
                 snprintf(buffer, buffer_len, "%d/%d",
-                         playlist_get_display_index(), playlist_amount());
+                         info->playlist_display_index, info->playlist_amount);
                 val=buffer;
                 if(say_it)
                 {
-                    talk_number(playlist_get_display_index(), true);
+                    talk_number(info->playlist_display_index, true);
                     talk_id(VOICE_OF, true);
-                    talk_number(playlist_amount(), true);
+                    talk_number(info->playlist_amount, true);
                 }
+                break;
+            case LANG_FORMAT:
+                if (id3->codectype >= AFMT_NUM_CODECS)
+                    return NULL;
+                snprintf(buffer, buffer_len, "%s", audio_formats[id3->codectype].label);
+                val=buffer;
+                if(say_it)
+                    talk_spell(val, true);
                 break;
             case LANG_ID3_BITRATE:
                 snprintf(buffer, buffer_len, "%d kbps%s", id3->bitrate,
@@ -669,15 +686,16 @@ static int id3_speak_item(int selected_item, void* data)
     return 0;
 }
 
-bool browse_id3(void)
+bool browse_id3(struct mp3entry *id3, int playlist_display_index, int playlist_amount)
 {
     struct gui_synclist id3_lists;
-    struct mp3entry* id3 = audio_current_track();
     int key;
     unsigned int i;
     struct id3view_info info;
     info.count = 0;
     info.id3 = id3;
+    info.playlist_display_index = playlist_display_index;
+    info.playlist_amount = playlist_amount;
     bool ret = false;
     push_current_activity(ACTIVITY_ID3SCREEN);
     for (i = 0; i < ARRAYLEN(id3_headers); i++)
@@ -692,6 +710,7 @@ bool browse_id3(void)
     if(global_settings.talk_menu)
         gui_synclist_set_voice_callback(&id3_lists, id3_speak_item);
     gui_synclist_set_nb_items(&id3_lists, info.count*2);
+    gui_synclist_set_title(&id3_lists, str(LANG_TRACK_INFO), NOICON);
     gui_synclist_draw(&id3_lists);
     gui_synclist_speak_item(&id3_lists);
     while (true) {

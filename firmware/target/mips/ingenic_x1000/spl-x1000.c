@@ -34,20 +34,49 @@
 #include "ucl_decompress.h"
 #include <string.h>
 
-#if defined(FIIO_M3K) || defined(SHANLING_Q1)
-# define SPL_DDR_MEMORYSIZE  64
-# define SPL_DDR_AUTOSR_EN   1
-# define SPL_DDR_NEED_BYPASS 1
+#if defined(FIIO_M3K)
+/* Size of memory, either 64 or 32 is legal. */
+# define SPL_DDR_MEMORYSIZE     64
+/* Pin to flash on spl_error(). Should be a backlight. */
+# define SPL_ERROR_PIN          GPIO_PC(24)
+/* Address and size of the bootloader on the storage medium used by the SPL */
+# define BOOT_STORAGE_ADDR      0x6800
+# define BOOT_STORAGE_SIZE      (102 * 1024)
+#elif defined(SHANLING_Q1)
+# define SPL_DDR_MEMORYSIZE     64
+# define SPL_ERROR_PIN          GPIO_PC(25)
+# define BOOT_STORAGE_ADDR      0x6800
+# define BOOT_STORAGE_SIZE      (102 * 1024)
 #elif defined(EROS_QN)
-# define SPL_DDR_MEMORYSIZE 32
-# define SPL_DDR_AUTOSR_EN   1
-# define SPL_DDR_NEED_BYPASS 1
+# define SPL_DDR_MEMORYSIZE     32
+# define SPL_ERROR_PIN          GPIO_PC(25)
+# define BOOT_STORAGE_ADDR      0x6800
+# define BOOT_STORAGE_SIZE      (102 * 1024)
 #else
-# error "please define DRAM settings"
+# error "please define SPL config"
+#endif
+
+/* Hardcode this since the SPL is considered part of the bootloader,
+ * and should never get built or updated separately. */
+#define BOOT_LOAD_ADDR  X1000_DRAM_BASE
+#define BOOT_EXEC_ADDR  BOOT_LOAD_ADDR
+
+/* Whether the bootloader is UCL-compressed */
+#ifndef SPL_USE_UCLPACK
+# define SPL_USE_UCLPACK 1
+#endif
+
+/* Whether auto-self-refresh should be enabled (seems it always should be?) */
+#ifndef SPL_DDR_AUTOSR_EN
+# define SPL_DDR_AUTOSR_EN 1
+#endif
+
+/* Whether DLL bypass is necessary (probably always?) */
+#ifndef SPL_DDR_NEED_BYPASS
+# define SPL_DDR_NEED_BYPASS 1
 #endif
 
 static void* heap = (void*)(X1000_SDRAM_BASE + X1000_SDRAM_SIZE);
-static nand_drv* ndrv = NULL;
 
 void* spl_alloc(size_t count)
 {
@@ -56,114 +85,14 @@ void* spl_alloc(size_t count)
     return heap;
 }
 
-int spl_storage_open(void)
+void spl_error(void)
 {
-    /* We need to assign the GPIOs manually */
-    gpioz_configure(GPIO_A, 0x3f << 26, GPIOF_DEVICE(1));
-
-    /* Allocate NAND driver manually in DRAM */
-    ndrv = spl_alloc(sizeof(nand_drv));
-    ndrv->page_buf = spl_alloc(NAND_DRV_MAXPAGESIZE);
-    ndrv->scratch_buf = spl_alloc(NAND_DRV_SCRATCHSIZE);
-    ndrv->refcount = 0;
-
-    return nand_open(ndrv);
-}
-
-void spl_storage_close(void)
-{
-    nand_close(ndrv);
-}
-
-int spl_storage_read(uint32_t addr, uint32_t length, void* buffer)
-{
-    return nand_read_bytes(ndrv, addr, length, buffer);
-}
-
-/* Used by:
- * - FiiO M3K
- * - Shanling Q1
- *
- * Amend it and add #ifdefs for other targets if needed.
- */
-void spl_dualboot_init_clocktree(void)
-{
-    /* Make sure these are gated to match the OF behavior. */
-    jz_writef(CPM_CLKGR, PCM(1), MAC(1), LCD(1), MSC0(1), MSC1(1), OTG(1), CIM(1));
-
-    /* Set clock sources, and make sure every clock starts out stopped */
-    jz_writef(CPM_I2SCDR, CS_V(EXCLK));
-    jz_writef(CPM_PCMCDR, CS_V(EXCLK));
-
-    jz_writef(CPM_MACCDR, CLKSRC_V(MPLL), CE(1), STOP(1), CLKDIV(0xfe));
-    while(jz_readf(CPM_MACCDR, BUSY));
-
-    jz_writef(CPM_LPCDR, CLKSRC_V(MPLL), CE(1), STOP(1), CLKDIV(0xfe));
-    while(jz_readf(CPM_LPCDR, BUSY));
-
-    jz_writef(CPM_MSC0CDR, CLKSRC_V(MPLL), CE(1), STOP(1), CLKDIV(0xfe));
-    while(jz_readf(CPM_MSC0CDR, BUSY));
-
-    jz_writef(CPM_MSC1CDR, CE(1), STOP(1), CLKDIV(0xfe));
-    while(jz_readf(CPM_MSC1CDR, BUSY));
-
-    jz_writef(CPM_CIMCDR, CLKSRC_V(MPLL), CE(1), STOP(1), CLKDIV(0xfe));
-    while(jz_readf(CPM_CIMCDR, BUSY));
-
-    jz_writef(CPM_USBCDR, CLKSRC_V(EXCLK), CE(1), STOP(1));
-    while(jz_readf(CPM_USBCDR, BUSY));
-}
-
-void spl_dualboot_init_uart2(void)
-{
-    /* Ungate the clock and select UART2 device function */
-    jz_writef(CPM_CLKGR, UART2(0));
-    gpioz_configure(GPIO_C, 3 << 30, GPIOF_DEVICE(1));
-
-    /* Disable all interrupts */
-    jz_write(UART_UIER(2), 0);
-
-    /* FIFO configuration */
-    jz_overwritef(UART_UFCR(2),
-                  RDTR(3), /* FIFO trigger level = 60? */
-                  UME(0),  /* UART module disable */
-                  DME(1),  /* DMA mode enable? */
-                  TFRT(1), /* transmit FIFO reset */
-                  RFRT(1), /* receive FIFO reset */
-                  FME(1)); /* FIFO mode enable */
-
-    /* IR mode configuration */
-    jz_overwritef(UART_ISR(2),
-                  RDPL(1),      /* Zero is negative pulse for receive */
-                  TDPL(1),      /* ... and for transmit */
-                  XMODE(1),     /* Pulse width 1.6us */
-                  RCVEIR(0),    /* Disable IR for recieve */
-                  XMITIR(0));   /* ... and for transmit */
-
-    /* Line configuration */
-    jz_overwritef(UART_ULCR(2), DLAB(0),
-                  WLS_V(8BITS),         /* 8 bit words */
-                  SBLS_V(1_STOP_BIT),   /* 1 stop bit */
-                  PARE(0),              /* no parity */
-                  SBK(0));              /* don't set break */
-
-    /* Set the baud rate... not too sure how this works. (Docs unclear!) */
-    const unsigned divisor = 0x0004;
-    jz_writef(UART_ULCR(2), DLAB(1));
-    jz_write(UART_UDLHR(2), (divisor >> 8) & 0xff);
-    jz_write(UART_UDLLR(2), divisor & 0xff);
-    jz_write(UART_UMR(2), 16);
-    jz_write(UART_UACR(2), 0);
-    jz_writef(UART_ULCR(2), DLAB(0));
-
-    /* Enable UART */
-    jz_overwritef(UART_UFCR(2),
-                  RDTR(0),  /* FIFO trigger level = 1 */
-                  DME(0),   /* DMA mode disable */
-                  UME(1),   /* UART module enable */
-                  TFRT(1),  /* transmit FIFO reset */
-                  RFRT(1),  /* receive FIFO reset */
-                  FME(1));  /* FIFO mode enable */
+    int level = 0;
+    while(1) {
+        gpio_set_function(SPL_ERROR_PIN, GPIOF_OUTPUT(level));
+        mdelay(100);
+        level = 1 - level;
+    }
 }
 
 static void init_ost(void)
@@ -346,14 +275,14 @@ static int init_dram(void)
     return 0;
 }
 
-static void* get_load_buffer(const struct spl_boot_option* opt)
+static void* get_load_buffer(void)
 {
     /* read to a temporary location if we need to decompress,
      * otherwise simply read directly to the load address. */
-    if(opt->flags & BOOTFLAG_UCLPACK)
-        return spl_alloc(opt->storage_size);
+    if(SPL_USE_UCLPACK)
+        return spl_alloc(BOOT_STORAGE_SIZE);
     else
-        return (void*)opt->load_addr;
+        return (void*)BOOT_LOAD_ADDR;
 }
 
 /* Mapping of boot_sel[1:0] pins.
@@ -377,15 +306,10 @@ static uint32_t get_boot_sel(void)
     return (*(uint32_t*)0xf40001ec) & 3;
 }
 
-typedef void(*entry_fn)(int, char**, int, int) __attribute__((noreturn));
-
 void spl_main(void)
 {
-    int rc, boot_option;
-    const struct spl_boot_option* opt;
+    int rc;
     void* load_buffer;
-    char** kargv = NULL;
-    int kargc = 0;
 
     /* magic */
     REG_CPM_PSWC0ST = 0x00;
@@ -395,7 +319,6 @@ void spl_main(void)
 
     /* set up boot flags */
     init_boot_flags();
-    set_boot_option(BOOT_OPTION_ROCKBOX);
 
     /* early clock and DRAM init */
     clk_init_early();
@@ -409,14 +332,6 @@ void spl_main(void)
         return;
     }
 
-    /* find out what we should boot */
-    boot_option = spl_get_boot_option();
-    opt = &spl_boot_options[boot_option];
-    load_buffer = get_load_buffer(opt);
-
-    /* save the selection for later */
-    set_boot_option(boot_option);
-
     /* finish up clock init */
     clk_init();
 
@@ -425,44 +340,29 @@ void spl_main(void)
     if(rc != 0)
         spl_error();
 
-    rc = spl_storage_read(opt->storage_addr, opt->storage_size, load_buffer);
+    load_buffer = get_load_buffer();
+    rc = spl_storage_read(BOOT_STORAGE_ADDR, BOOT_STORAGE_SIZE, load_buffer);
     if(rc != 0)
         spl_error();
 
-    /* handle compression */
-    switch(opt->flags & BOOTFLAG_COMPRESSED) {
-    case BOOTFLAG_UCLPACK: {
-        uint32_t out_size = X1000_DRAM_END - opt->load_addr;
-        rc = ucl_unpack((uint8_t*)load_buffer, opt->storage_size,
-                        (uint8_t*)opt->load_addr, &out_size);
-    } break;
-
-    default:
-        break;
+    /* decompress */
+    if(SPL_USE_UCLPACK) {
+        uint32_t out_size = X1000_SDRAM_END - BOOT_LOAD_ADDR;
+        rc = ucl_unpack((uint8_t*)load_buffer, BOOT_STORAGE_SIZE,
+                        (uint8_t*)BOOT_LOAD_ADDR, &out_size);
+    } else {
+        rc = 0;
     }
 
     if(rc != 0)
         spl_error();
-
-    /* call the setup hook */
-    if(opt->setup) {
-        rc = opt->setup();
-        if(rc != 0)
-            spl_error();
-    }
 
     /* close off storage access */
     spl_storage_close();
 
-    /* handle kernel command line, if specified */
-    if(opt->cmdline) {
-        kargv = (char**)opt->cmdline_addr;
-        kargv[kargc++] = 0;
-        kargv[kargc++] = (char*)opt->cmdline;
-    }
-
     /* jump to the entry point */
-    entry_fn fn = (entry_fn)opt->exec_addr;
+    typedef void(*entry_fn)(void);
+    entry_fn fn = (entry_fn)BOOT_EXEC_ADDR;
     commit_discard_idcache();
-    fn(kargc, kargv, 0, 0);
+    fn();
 }

@@ -36,6 +36,14 @@ enum list_wrap {
     LIST_WRAP_UNLESS_HELD,
 };
 
+enum synclist_cursor
+{
+    SYNCLIST_CURSOR_NOSTYLE = 0,
+    SYNCLIST_CURSOR_INVERT,
+    SYNCLIST_CURSOR_COLOR,
+    SYNCLIST_CURSOR_GRADIENT,
+};
+
 /*
  * The gui_list is based on callback functions, if you want the list
  * to display something you have to provide it a function that
@@ -68,6 +76,35 @@ typedef enum themable_icons list_get_icon(int selected_item, void * data);
  */
 typedef const char * list_get_name(int selected_item, void * data,
                                    char * buffer, size_t buffer_len);
+/*
+ * Draw callback
+ *  - display : functions supplied depends on the screen call originated from (typ: MAIN)
+ *  - list_info : a pointer to an internal struct containing item display information
+ */
+/* owner drawn lists need to know this info */
+struct list_putlineinfo_t {
+    int x;
+    int y;
+    int item_indent;
+    int item_offset;
+    int line;
+
+    int icon;
+    int icon_width;
+
+    struct screen *display;
+    struct viewport *vp;
+    struct line_desc *linedes;
+    struct gui_synclist * list;
+    char *dsp_text;
+
+    bool is_selected;
+    bool is_title;
+    bool show_cursor;
+    bool have_icons;
+};
+
+typedef void list_draw_item(struct list_putlineinfo_t *list_info);
 /*
  * Voice callback
  *  - selected_item : an integer that tells the number of the item to speak
@@ -110,14 +147,28 @@ struct list_selection_color
 
 struct gui_synclist
 {
+    /*flags to hold settings show: icons, scrollbar etc..*/
+    int scrollbar;
+    int cursor_style;
+    bool show_icons;
+    bool keyclick;
+    bool talk_menu;
+    bool wraparound;
+    bool scroll_paginated;
     /* defines wether the list should stop when reaching the top/bottom
      * or should continue (by going to bottom/top) */
     bool limit_scroll;
-    /* wether the text of the whole items of the list have to be
+    /* whether the text of the whole items of the list have to be
      * scrolled or only for the selected item */
     bool scroll_all;
+    bool show_selection_marker; /* set to true by default */
     int nb_items;
     int selected_item;
+
+#ifdef HAVE_TOUCHSCREEN
+    /* absolute Y coordinate, used for smooth scrolling */
+    int y_pos;
+#endif
     int start_item[NB_SCREENS]; /* the item that is displayed at the top of the screen */
     /* the number of lines that are selected at the same time */
     int selected_size;
@@ -129,6 +180,7 @@ struct gui_synclist
     list_get_icon *callback_get_item_icon;
     list_get_name *callback_get_item_name;
     list_speak_item *callback_speak_item;
+    list_draw_item *callback_draw_item;
 
     /* The data that will be passed to the callback function YOU implement */
     void * data;
@@ -136,7 +188,6 @@ struct gui_synclist
     char * title;
     /* Optional title icon */
     enum themable_icons title_icon;
-    bool show_selection_marker; /* set to true by default */
 
 #ifdef HAVE_LCD_COLOR
     int title_color;
@@ -153,7 +204,7 @@ extern void gui_list_screen_scroll_step(int ofs);
 
 /* parse global setting to static bool */
 extern void gui_list_screen_scroll_out_of_view(bool enable);
-
+extern void gui_synclist_init_display_settings(struct gui_synclist * list);
 extern void gui_synclist_init(
     struct gui_synclist * lists,
     list_get_name callback_get_item_name,
@@ -229,7 +280,7 @@ int skinlist_get_line_count(enum screen_type screen, struct gui_synclist *list);
 /* this needs to be fixed if we ever get more than 1 touchscreen on a target */
 extern unsigned gui_synclist_do_touchscreen(struct gui_synclist * gui_list);
 /* only for private use in gui/list.c */
-extern void _gui_synclist_stop_kinetic_scrolling(void);
+extern void _gui_synclist_stop_kinetic_scrolling(struct gui_synclist * gui_list);
 #endif
 
 /* If the list has a pending postponed scheduled announcement, that

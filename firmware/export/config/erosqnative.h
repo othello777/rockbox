@@ -78,12 +78,13 @@
 #define HAVE_HOTSWAP
 #define HAVE_HOTSWAP_STORAGE_AS_MAIN
 #define HAVE_MULTIDRIVE
+#define HAVE_MULTIVOLUME
 #define NUM_DRIVES 1
 #define STORAGE_WANTS_ALIGN
 #define STORAGE_NEEDS_BOUNCE_BUFFER
 
 /* Power management */
-#define CONFIG_BATTERY_MEASURE VOLTAGE_MEASURE
+#define CONFIG_BATTERY_MEASURE (VOLTAGE_MEASURE/*|CURRENT_MEASURE*/)
 #define CONFIG_CHARGING        CHARGING_MONITOR
 #define HAVE_SW_POWEROFF
 
@@ -103,10 +104,13 @@
 #define CURRENT_BACKLIGHT 180
 #define CURRENT_MAX_CHG 500     // bursts higher if needed
 
+/* Multiboot */
+#define HAVE_BOOTDATA
+#define BOOT_REDIR "rockbox_main.aigo_erosqn"
+
 /* USB support */
 #ifndef SIMULATOR
 #define CONFIG_USBOTG USBOTG_DESIGNWARE
-#define USB_DW_ARCH_SLAVE
 #define USB_DW_TURNAROUND 5
 #define HAVE_USBSTACK
 #define USB_VENDOR_ID 0xc502
@@ -114,7 +118,18 @@
 #define USB_DEVBSS_ATTR __attribute__((aligned(32)))
 #define HAVE_USB_POWER
 #define HAVE_USB_CHARGING_ENABLE
+#define HAVE_USB_CHARGING_IN_THREAD
+#define TARGET_USB_CHARGING_DEFAULT USB_CHARGING_FORCE
 #define HAVE_BOOTLOADER_USB_MODE
+/* This appears to improve transfer performance (the default is 64 KiB).
+ * Going any higher doesn't help but we're still slower than the OF. */
+#define USB_READ_BUFFER_SIZE    (128 * 1024)
+#define USB_WRITE_BUFFER_SIZE   (128 * 1024)
+#endif
+
+#ifdef BOOTLOADER
+/* Ignore on any key can cause surprising USB issues in the bootloader */
+# define USBPOWER_BTN_IGNORE (~(BUTTON_PREV|BUTTON_NEXT))
 #endif
 
 /* Rockbox capabilities */
@@ -126,3 +141,4 @@
 #define HAVE_TAGCACHE
 #define HAVE_QUICKSCREEN
 #define HAVE_HOTKEY
+#define HAVE_BOOTLOADER_SCREENDUMP

@@ -345,6 +345,18 @@ static const char graphic_numeric[] = "graphic,numeric";
 #endif
 #endif /* HAVE_BACKLIGHT */
 
+#if defined(HAVE_USB_CHARGING_ENABLE)
+# if !defined(TARGET_USB_CHARGING_DEFAULT)
+#  define TARGET_USB_CHARGING_DEFAULT USB_CHARGING_ENABLE
+# endif
+#endif
+
+#ifdef AUDIOHW_HAVE_POWER_MODE
+# ifndef TARGET_DEFAULT_DAC_POWER_MODE
+#   define TARGET_DEFAULT_DAC_POWER_MODE SOUND_HIGH_POWER
+# endif
+#endif
+
 #if LCD_DEPTH > 1
 static const char* list_pad_formatter(char *buffer, size_t buffer_size,
                                     int val, const char *unit)
@@ -871,7 +883,8 @@ const struct settings_list settings[] = {
 #endif
 
 #ifdef AUDIOHW_HAVE_POWER_MODE
-    CHOICE_SETTING(F_SOUNDSETTING, power_mode, LANG_DAC_POWER_MODE, 0,
+    CHOICE_SETTING(F_SOUNDSETTING, power_mode, LANG_DAC_POWER_MODE,
+                   TARGET_DEFAULT_DAC_POWER_MODE,
                    "dac_power_mode", "high,low", sound_set_power_mode,
                    2, ID2P(LANG_DAC_POWER_HIGH), ID2P(LANG_DAC_POWER_LOW)),
 #endif
@@ -914,6 +927,16 @@ const struct settings_list settings[] = {
       #error "HAVE_PLAY_FREQ < 48???"
 #endif
 #endif /* HAVE_PLAY_FREQ */
+
+#ifdef HAVE_ALBUMART
+    CHOICE_SETTING(0, album_art, LANG_ALBUM_ART, 1,
+                      "album art", "off,prefer embedded,prefer image file",
+                      NULL, 3,
+                      ID2P(LANG_OFF),
+                      ID2P(LANG_PREFER_EMBEDDED),
+                      ID2P(LANG_PREFER_IMAGE_FILE)),
+#endif
+
     /* LCD */
 #ifdef HAVE_LCD_CONTRAST
     /* its easier to leave this one un-macro()ed for the time being */
@@ -1030,13 +1053,7 @@ const struct settings_list settings[] = {
                   NULL, NULL, NULL),
 /* use this setting for user code even if there's no exchangable battery
  * support enabled */
-#if BATTERY_CAPACITY_DEFAULT > 0
-/* define min/max/inc for this file if there's only one battery */
-#ifndef BATTERY_CAPACITY_MIN
-#define BATTERY_CAPACITY_MIN BATTERY_CAPACITY_DEFAULT
-#define BATTERY_CAPACITY_MAX BATTERY_CAPACITY_DEFAULT
-#define BATTERY_CAPACITY_INC 0
-#endif
+#if BATTERY_CAPACITY_INC > 0
 #if defined(IPOD_VIDEO) && !defined(SIMULATOR)
     /* its easier to leave this one un-macro()ed for the time being */
     { F_T_INT|F_DEF_ISFUNC|F_INT_SETTING, &global_settings.battery_capacity,
@@ -1075,9 +1092,12 @@ const struct settings_list settings[] = {
 #endif
     /* tuner */
 #if CONFIG_TUNER
-    OFFON_SETTING(0,fm_force_mono, LANG_FM_MONO_MODE,
+    OFFON_SETTING(0, fm_force_mono, LANG_FM_MONO_MODE,
                   false, "force fm mono", toggle_mono_mode),
-                  SYSTEM_SETTING(NVRAM(4),last_frequency,0),
+    SYSTEM_SETTING(NVRAM(4), last_frequency, 0),
+#endif
+#if defined(HAVE_RDS_CAP) && defined(CONFIG_RTC)
+    OFFON_SETTING(0, sync_rds_time, LANG_FM_SYNC_RDS_TIME, false, "sync_rds_time", NULL),
 #endif
 
 #if BATTERY_TYPES_COUNT > 1
@@ -1214,6 +1234,17 @@ const struct settings_list settings[] = {
                 gui_list_screen_scroll_step),
     OFFON_SETTING(0,scroll_paginated,LANG_SCROLL_PAGINATED,
                   false,"scroll paginated",NULL),
+    OFFON_SETTING(0,list_wraparound,LANG_LIST_WRAPAROUND,
+                  true,"list wraparound",NULL),
+    CHOICE_SETTING(0, list_order, LANG_LIST_ORDER,
+#if defined(HAVE_SCROLLWHEEL) && !defined(FIIO_M3K)
+                   1,
+#else
+                   0,
+#endif
+                   /* values are defined by the enum in option_select.h */
+                   "list order", "descending,ascending",
+                   NULL, 2, ID2P(LANG_DESCENDING), ID2P(LANG_ASCENDING)),
 #ifdef HAVE_LCD_COLOR
 
     {F_T_INT|F_RGB|F_THEMESETTING ,&global_settings.fg_color,-1,
@@ -1232,6 +1263,18 @@ const struct settings_list settings[] = {
 #endif
     /* more playback */
     OFFON_SETTING(0,play_selected,LANG_PLAY_SELECTED,true,"play selected",NULL),
+    CHOICE_SETTING(0, single_mode, LANG_SINGLE_MODE, 0,
+                  "single mode",
+                  "off,track,album,album artist,artist,composer,work,genre",
+                  NULL, 8,
+                  ID2P(LANG_OFF),
+                  ID2P(LANG_TRACK),
+                  ID2P(LANG_ID3_ALBUM),
+                  ID2P(LANG_ID3_ALBUMARTIST),
+                  ID2P(LANG_ID3_ARTIST),
+                  ID2P(LANG_ID3_COMPOSER),
+                  ID2P(LANG_ID3_GROUPING),
+                  ID2P(LANG_ID3_GENRE)),
     OFFON_SETTING(0,party_mode,LANG_PARTY_MODE,false,"party mode",NULL),
     OFFON_SETTING(0,fade_on_stop,LANG_FADE_ON_STOP,true,"volume fade",NULL),
     INT_SETTING(F_TIME_SETTING, ff_rewind_min_step, LANG_FFRW_STEP, 1,
@@ -1425,7 +1468,7 @@ const struct settings_list settings[] = {
         LANG_FREQUENCY,INT(REC_FREQ_DEFAULT),
         "rec frequency",REC_FREQ_CFG_VAL_LIST,UNUSED},
     {F_T_INT|F_RECSETTING,&global_settings.rec_format,
-        LANG_RECORDING_FORMAT,INT(REC_FORMAT_DEFAULT),
+        LANG_FORMAT,INT(REC_FORMAT_DEFAULT),
         "rec format",REC_FORMAT_CFG_VAL_LIST,UNUSED},
     /** Encoder settings start - keep these together **/
     /* aiff_enc */
@@ -1570,105 +1613,11 @@ const struct settings_list settings[] = {
 
     /* equalizer */
     OFFON_SETTING(F_EQSETTING, eq_enabled, LANG_EQUALIZER_ENABLED, false,
-                  "eq enabled", NULL),
+                  "eq enabled", eq_enabled_option_callback),
 
     INT_SETTING_NOWRAP(F_EQSETTING, eq_precut, LANG_EQUALIZER_PRECUT, 0,
                        "eq precut", UNIT_DB, 0, 240, 1, eq_precut_format,
                        get_precut_talkid, dsp_set_eq_precut),
-
-    /* 0..32768 Hz */
-    INT_SETTING_NOWRAP(F_DEPRECATED|F_EQSETTING, eq_band_settings[0].cutoff, LANG_EQUALIZER_BAND_CUTOFF,
-                       32, "eq band 0 cutoff", UNIT_HERTZ, EQ_CUTOFF_MIN,
-                       EQ_CUTOFF_MAX, EQ_CUTOFF_STEP, NULL, NULL, NULL),
-    INT_SETTING_NOWRAP(F_DEPRECATED|F_EQSETTING, eq_band_settings[1].cutoff, LANG_EQUALIZER_BAND_CENTER,
-                       64, "eq band 1 cutoff", UNIT_HERTZ, EQ_CUTOFF_MIN,
-                       EQ_CUTOFF_MAX, EQ_CUTOFF_STEP, NULL, NULL, NULL),
-    INT_SETTING_NOWRAP(F_DEPRECATED|F_EQSETTING, eq_band_settings[2].cutoff, LANG_EQUALIZER_BAND_CENTER,
-                       125, "eq band 2 cutoff", UNIT_HERTZ, EQ_CUTOFF_MIN,
-                       EQ_CUTOFF_MAX, EQ_CUTOFF_STEP, NULL, NULL, NULL),
-    INT_SETTING_NOWRAP(F_DEPRECATED|F_EQSETTING, eq_band_settings[3].cutoff, LANG_EQUALIZER_BAND_CENTER,
-                       250, "eq band 3 cutoff", UNIT_HERTZ, EQ_CUTOFF_MIN,
-                       EQ_CUTOFF_MAX, EQ_CUTOFF_STEP, NULL, NULL, NULL),
-    INT_SETTING_NOWRAP(F_DEPRECATED|F_EQSETTING, eq_band_settings[4].cutoff, LANG_EQUALIZER_BAND_CENTER,
-                       500, "eq band 4 cutoff", UNIT_HERTZ, EQ_CUTOFF_MIN,
-                       EQ_CUTOFF_MAX, EQ_CUTOFF_STEP, NULL, NULL, NULL),
-    INT_SETTING_NOWRAP(F_DEPRECATED|F_EQSETTING, eq_band_settings[5].cutoff, LANG_EQUALIZER_BAND_CENTER,
-                       1000, "eq band 5 cutoff", UNIT_HERTZ, EQ_CUTOFF_MIN,
-                       EQ_CUTOFF_MAX, EQ_CUTOFF_STEP, NULL, NULL, NULL),
-    INT_SETTING_NOWRAP(F_DEPRECATED|F_EQSETTING, eq_band_settings[6].cutoff, LANG_EQUALIZER_BAND_CENTER,
-                       2000, "eq band 6 cutoff", UNIT_HERTZ, EQ_CUTOFF_MIN,
-                       EQ_CUTOFF_MAX, EQ_CUTOFF_STEP, NULL, NULL, NULL),
-    INT_SETTING_NOWRAP(F_DEPRECATED|F_EQSETTING, eq_band_settings[7].cutoff, LANG_EQUALIZER_BAND_CENTER,
-                       4000, "eq band 7 cutoff", UNIT_HERTZ, EQ_CUTOFF_MIN,
-                       EQ_CUTOFF_MAX, EQ_CUTOFF_STEP, NULL, NULL, NULL),
-    INT_SETTING_NOWRAP(F_DEPRECATED|F_EQSETTING, eq_band_settings[8].cutoff, LANG_EQUALIZER_BAND_CENTER,
-                       8000, "eq band 8 cutoff", UNIT_HERTZ, EQ_CUTOFF_MIN,
-                       EQ_CUTOFF_MAX, EQ_CUTOFF_STEP, NULL, NULL, NULL),
-    INT_SETTING_NOWRAP(F_DEPRECATED|F_EQSETTING, eq_band_settings[9].cutoff, LANG_EQUALIZER_BAND_CUTOFF,
-                       16000, "eq band 9 cutoff", UNIT_HERTZ, EQ_CUTOFF_MIN,
-                       EQ_CUTOFF_MAX, EQ_CUTOFF_STEP, NULL, NULL, NULL),
-    /* 0..64 (or 0.0 to 6.4) */
-    INT_SETTING_NOWRAP(F_DEPRECATED|F_EQSETTING, eq_band_settings[0].q, LANG_EQUALIZER_BAND_Q, 7,
-                       "eq band 0 q", UNIT_INT, EQ_Q_MIN, EQ_Q_MAX, EQ_Q_STEP,
-                       eq_q_format, get_dec_talkid, NULL),
-    INT_SETTING_NOWRAP(F_DEPRECATED|F_EQSETTING, eq_band_settings[1].q, LANG_EQUALIZER_BAND_Q, 10,
-                       "eq band 1 q", UNIT_INT, EQ_Q_MIN, EQ_Q_MAX, EQ_Q_STEP,
-                       eq_q_format, get_dec_talkid, NULL),
-    INT_SETTING_NOWRAP(F_DEPRECATED|F_EQSETTING, eq_band_settings[2].q, LANG_EQUALIZER_BAND_Q, 10,
-                       "eq band 2 q", UNIT_INT, EQ_Q_MIN, EQ_Q_MAX, EQ_Q_STEP,
-                       eq_q_format, get_dec_talkid, NULL),
-    INT_SETTING_NOWRAP(F_DEPRECATED|F_EQSETTING, eq_band_settings[3].q, LANG_EQUALIZER_BAND_Q, 10,
-                       "eq band 3 q", UNIT_INT, EQ_Q_MIN, EQ_Q_MAX, EQ_Q_STEP,
-                       eq_q_format, get_dec_talkid, NULL),
-    INT_SETTING_NOWRAP(F_DEPRECATED|F_EQSETTING, eq_band_settings[4].q, LANG_EQUALIZER_BAND_Q, 10,
-                       "eq band 4 q", UNIT_INT, EQ_Q_MIN, EQ_Q_MAX, EQ_Q_STEP,
-                       eq_q_format, get_dec_talkid, NULL),
-    INT_SETTING_NOWRAP(F_DEPRECATED|F_EQSETTING, eq_band_settings[5].q, LANG_EQUALIZER_BAND_Q, 10,
-                       "eq band 5 q", UNIT_INT, EQ_Q_MIN, EQ_Q_MAX, EQ_Q_STEP,
-                       eq_q_format, get_dec_talkid, NULL),
-    INT_SETTING_NOWRAP(F_DEPRECATED|F_EQSETTING, eq_band_settings[6].q, LANG_EQUALIZER_BAND_Q, 10,
-                       "eq band 6 q", UNIT_INT, EQ_Q_MIN, EQ_Q_MAX, EQ_Q_STEP,
-                       eq_q_format, get_dec_talkid, NULL),
-    INT_SETTING_NOWRAP(F_DEPRECATED|F_EQSETTING, eq_band_settings[7].q, LANG_EQUALIZER_BAND_Q, 10,
-                       "eq band 7 q", UNIT_INT, EQ_Q_MIN, EQ_Q_MAX, EQ_Q_STEP,
-                       eq_q_format, get_dec_talkid, NULL),
-    INT_SETTING_NOWRAP(F_DEPRECATED|F_EQSETTING, eq_band_settings[8].q, LANG_EQUALIZER_BAND_Q, 10,
-                       "eq band 8 q", UNIT_INT, EQ_Q_MIN, EQ_Q_MAX, EQ_Q_STEP,
-                       eq_q_format, get_dec_talkid, NULL),
-    INT_SETTING_NOWRAP(F_DEPRECATED|F_EQSETTING, eq_band_settings[9].q, LANG_EQUALIZER_BAND_Q, 7,
-                       "eq band 9 q", UNIT_INT, EQ_Q_MIN, EQ_Q_MAX, EQ_Q_STEP,
-                       eq_q_format, get_dec_talkid, NULL),
-    /* -240..240 (or -24db to +24db) */
-    INT_SETTING_NOWRAP(F_DEPRECATED|F_EQSETTING, eq_band_settings[0].gain, LANG_GAIN, 0,
-                       "eq band 0 gain", UNIT_DB, EQ_GAIN_MIN, EQ_GAIN_MAX,
-                       EQ_GAIN_STEP, db_format, get_dec_talkid, NULL),
-    INT_SETTING_NOWRAP(F_DEPRECATED|F_EQSETTING, eq_band_settings[1].gain, LANG_GAIN, 0,
-                       "eq band 1 gain", UNIT_DB, EQ_GAIN_MIN, EQ_GAIN_MAX,
-                       EQ_GAIN_STEP, db_format, get_dec_talkid, NULL),
-    INT_SETTING_NOWRAP(F_DEPRECATED|F_EQSETTING, eq_band_settings[2].gain, LANG_GAIN, 0,
-                       "eq band 2 gain", UNIT_DB, EQ_GAIN_MIN, EQ_GAIN_MAX,
-                       EQ_GAIN_STEP, db_format, get_dec_talkid, NULL),
-    INT_SETTING_NOWRAP(F_DEPRECATED|F_EQSETTING, eq_band_settings[3].gain, LANG_GAIN, 0,
-                       "eq band 3 gain", UNIT_DB, EQ_GAIN_MIN, EQ_GAIN_MAX,
-                       EQ_GAIN_STEP, db_format, get_dec_talkid, NULL),
-    INT_SETTING_NOWRAP(F_DEPRECATED|F_EQSETTING, eq_band_settings[4].gain, LANG_GAIN, 0,
-                       "eq band 4 gain", UNIT_DB, EQ_GAIN_MIN, EQ_GAIN_MAX,
-                       EQ_GAIN_STEP, db_format, get_dec_talkid, NULL),
-    INT_SETTING_NOWRAP(F_DEPRECATED|F_EQSETTING, eq_band_settings[5].gain, LANG_GAIN, 0,
-                       "eq band 5 gain", UNIT_DB, EQ_GAIN_MIN, EQ_GAIN_MAX,
-                       EQ_GAIN_STEP, db_format, get_dec_talkid, NULL),
-    INT_SETTING_NOWRAP(F_DEPRECATED|F_EQSETTING, eq_band_settings[6].gain, LANG_GAIN, 0,
-                       "eq band 6 gain", UNIT_DB, EQ_GAIN_MIN, EQ_GAIN_MAX,
-                       EQ_GAIN_STEP, db_format, get_dec_talkid, NULL),
-    INT_SETTING_NOWRAP(F_DEPRECATED|F_EQSETTING, eq_band_settings[7].gain, LANG_GAIN, 0,
-                       "eq band 7 gain", UNIT_DB, EQ_GAIN_MIN, EQ_GAIN_MAX,
-                       EQ_GAIN_STEP, db_format, get_dec_talkid, NULL),
-    INT_SETTING_NOWRAP(F_DEPRECATED|F_EQSETTING, eq_band_settings[8].gain, LANG_GAIN, 0,
-                       "eq band 8 gain", UNIT_DB, EQ_GAIN_MIN, EQ_GAIN_MAX,
-                       EQ_GAIN_STEP, db_format, get_dec_talkid, NULL),
-    INT_SETTING_NOWRAP(F_DEPRECATED|F_EQSETTING, eq_band_settings[9].gain, LANG_GAIN, 0,
-                       "eq band 9 gain", UNIT_DB, EQ_GAIN_MIN, EQ_GAIN_MAX,
-                       EQ_GAIN_STEP, db_format, get_dec_talkid, NULL),
 
 #define EQ_BAND(id, string) \
         CUSTOM_SETTING(F_EQSETTING, eq_band_settings[id], -1,   \
@@ -1804,9 +1753,11 @@ const struct settings_list settings[] = {
                    ID2P(LANG_CODEPAGE_JAPANESE),
                    ID2P(LANG_CODEPAGE_SIMPLIFIED), ID2P(LANG_CODEPAGE_KOREAN),
                    ID2P(LANG_CODEPAGE_TRADITIONAL), ID2P(LANG_CODEPAGE_UTF8)),
+
     OFFON_SETTING(0, warnon_erase_dynplaylist, LANG_WARN_ERASEDYNPLAYLIST_MENU,
                   true, "warn when erasing dynamic playlist",NULL),
-
+    OFFON_SETTING(0, keep_current_track_on_replace_playlist, LANG_KEEP_CURRENT_TRACK_ON_REPLACE,
+                  true, "keep current track when replacing playlist",NULL),
     OFFON_SETTING(0, show_shuffled_adding_options, LANG_SHOW_SHUFFLED_ADDING_OPTIONS, true,
                       "show shuffled adding options", NULL),
     CHOICE_SETTING(0, show_queue_options, LANG_SHOW_QUEUE_OPTIONS, 1,
@@ -1883,8 +1834,6 @@ const struct settings_list settings[] = {
                    ID2P(LANG_FM_ITALY), ID2P(LANG_FM_OTHER)),
 #endif
 
-    OFFON_SETTING(F_BANFROMQS, audioscrobbler, LANG_AUDIOSCROBBLER, false,
-                  "Last.fm Logging", NULL),
 #if CONFIG_TUNER
     TEXT_SETTING(0, fmr_file, "fmr", "-",
                      FMPRESET_PATH "/", ".fmr"),
@@ -1921,7 +1870,7 @@ const struct settings_list settings[] = {
 #endif
     TEXT_SETTING(0,kbd_file,"kbd","-",ROCKBOX_DIR "/",".kbd"),
 #ifdef HAVE_USB_CHARGING_ENABLE
-    CHOICE_SETTING(0, usb_charging, LANG_USB_CHARGING, 1, "usb charging",
+    CHOICE_SETTING(0, usb_charging, LANG_USB_CHARGING, TARGET_USB_CHARGING_DEFAULT, "usb charging",
                    "off,on,force", NULL, 3, ID2P(LANG_SET_BOOL_NO),
                    ID2P(LANG_SET_BOOL_YES), ID2P(LANG_FORCE)),
 #endif
@@ -2047,6 +1996,10 @@ const struct settings_list settings[] = {
                   "sleeptimer on startup", NULL),
     OFFON_SETTING(0, keypress_restarts_sleeptimer, LANG_KEYPRESS_RESTARTS_SLEEP_TIMER, false,
                   "keypress restarts sleeptimer", set_keypress_restarts_sleep_timer),
+
+    OFFON_SETTING(0, show_shutdown_message, LANG_SHOW_SHUTDOWN_MESSAGE, true,
+                  "show shutdown message", NULL),
+
 #ifdef HAVE_TOUCHPAD_SENSITIVITY_SETTING
 /* If specific values are set for touchpad sensitivity setting we use those */
 #if (defined(MAX_TOUCHPAD_SENSITIVITY_SETTING) \

@@ -38,7 +38,7 @@
 /* make sure SYS_EVENT_CLS_BITS has enough range */
 
 /* Bit 31->|S|c...c|i...i| */
-#define SYS_EVENT                 ((long)(int)(1 << 31))
+#define SYS_EVENT                 ((long)(int)(1u << 31))
 #define SYS_EVENT_CLS_BITS        (3)
 #define SYS_EVENT_CLS_SHIFT       (31-SYS_EVENT_CLS_BITS)
 #define SYS_EVENT_CLS_MASK        (((1l << SYS_EVENT_CLS_BITS)-1) << SYS_EVENT_SHIFT)
@@ -58,6 +58,7 @@
 #define SYS_CHARGER_CONNECTED     MAKE_SYS_EVENT(SYS_EVENT_CLS_POWER, 1)
 #define SYS_CHARGER_DISCONNECTED  MAKE_SYS_EVENT(SYS_EVENT_CLS_POWER, 2)
 #define SYS_BATTERY_UPDATE        MAKE_SYS_EVENT(SYS_EVENT_CLS_POWER, 3)
+#define SYS_REBOOT                MAKE_SYS_EVENT(SYS_EVENT_CLS_POWER, 4)
 #define SYS_FS_CHANGED            MAKE_SYS_EVENT(SYS_EVENT_CLS_FILESYS, 0)
 #define SYS_HOTSWAP_INSERTED      MAKE_SYS_EVENT(SYS_EVENT_CLS_PLUG, 0)
 #define SYS_HOTSWAP_EXTRACTED     MAKE_SYS_EVENT(SYS_EVENT_CLS_PLUG, 1)

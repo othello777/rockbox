@@ -84,6 +84,7 @@ struct viewport* LCDFN(init_viewport)(struct viewport* vp)
     {
         vp = &default_vp;
         vp->buffer = fb_default;
+        return vp;
     }
 
     /* use defaults if no buffer is provided */
@@ -132,8 +133,9 @@ struct viewport* LCDFN(set_viewport_ex)(struct viewport* vp, int flags)
      *  expected.
      */
 
-    if((unsigned) vp->x > (unsigned) LCDM(WIDTH)
-        || (unsigned) vp->y > (unsigned) LCDM(HEIGHT)
+    if( vp->x < 0 || vp->y < 0
+        || vp->x > LCDM(WIDTH)
+        || vp->y > LCDM(HEIGHT)
         || vp->x + vp->width > LCDM(WIDTH)
         || vp->y + vp->height > LCDM(HEIGHT))
     {
@@ -176,19 +178,39 @@ struct viewport *LCDFN(get_viewport)(bool *is_default)
 
 void LCDFN(update_viewport)(void)
 {
+
     struct viewport* vp = LCDFN(current_viewport);
-    if (vp->buffer->stride != LCDFN(framebuffer_default.stride))
+    if ((vp->flags & VP_FLAG_OWNER_UPDATE) == VP_FLAG_OWNER_UPDATE)
     {
-        LCDFN(update_viewport_rect)(0,0, vp->width, vp->height);
+#ifdef LOGF_ENABLE
+        logf("%s ignored - owner update", __func__);
+#endif
         return;
     }
-    LCDFN(update_rect)(vp->x, vp->y, vp->width, vp->height);
+    int x, y;
+    if (vp->buffer->stride != LCDFN(framebuffer_default.stride))
+    {
+        x = 0;
+        y = 0;
+    }
+    else
+    {
+        x = vp->x;
+        y = vp->y;
+    }
+    LCDFN(update_rect)(x, y, vp->width, vp->height);
 }
 
 void LCDFN(update_viewport_rect)(int x, int y, int width, int height)
 {
     struct viewport* vp = LCDFN(current_viewport);
-
+    if ((vp->flags & VP_FLAG_OWNER_UPDATE) == VP_FLAG_OWNER_UPDATE)
+    {
+#ifdef LOGF_ENABLE
+        logf("%s ignored - owner update", __func__);
+#endif
+        return;
+    }
     /* handle the case of viewport with differing stride from main screen */
     if (vp->buffer->stride != LCDFN(framebuffer_default.stride))
     {
@@ -511,9 +533,10 @@ static bool LCDFN(puts_scroll_worker)(int x, int y, const unsigned char *string,
     x = x * (linebased ? cwidth : 1);
     width = vp->width - x;
 
-    if (y >= vp->height || (height + y) > (vp->height))
+    if (y >= vp->height)
         return false;
-
+    if ((height + y) > (vp->height))
+        height = vp->height - y;
     s = find_scrolling_line(x, y);
     restart = !s;
 

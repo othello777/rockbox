@@ -102,11 +102,31 @@
 #include "rbunicode.h"
 #include "root_menu.h"
 #include "plugin.h" /* To borrow a temp buffer to rewrite a .m3u8 file */
-#include "panic.h"
 #include "logdiskf.h"
 #ifdef HAVE_DIRCACHE
 #include "dircache.h"
 #endif
+
+#if 0//def ROCKBOX_HAS_LOGDISKF
+#warning LOGF enabled
+#define LOGF_ENABLE
+#include "logf.h"
+#undef DEBUGF
+#undef ERRORF
+#undef WARNF
+#undef NOTEF
+#define DEBUGF logf
+#define ERRORF DEBUGF
+#define WARNF DEBUGF
+#define NOTEF DEBUGF
+//ERRORF
+//WARNF
+//NOTEF
+#endif
+
+
+
+
 
 #define PLAYLIST_CONTROL_FILE_VERSION 2
 
@@ -429,7 +449,7 @@ static int recreate_control(struct playlist_info* playlist)
         char c = playlist->filename[playlist->dirlen-1];
 
         close(playlist->control_fd);
-        playlist->control_fd = 0;
+        playlist->control_fd = -1;
 
         snprintf(temp_file, sizeof(temp_file), "%s%s",
             playlist->control_filename, file_suffix);
@@ -1721,6 +1741,20 @@ static int check_subdir_for_music(char *dir, const char *subdir, bool recurse)
 
 /*
  * Returns absolute path of track
+ *
+ * dest: output buffer
+ * src: the file name from the playlist
+ * dir: the absolute path to the directory where the playlist resides
+ *
+ * The type of path in "src" determines what will be written to "dest":
+ *
+ * 1. UNIX-style absolute paths (/foo/bar) remain unaltered
+ * 2. Windows-style absolute paths (C:/foo/bar) will be converted into an
+ *    absolute path by replacing the drive letter with the volume that the
+ *    *playlist* resides on, ie. the volume in "dir"
+ * 3. Relative paths are converted to absolute paths by prepending "dir".
+ *    This also applies to Windows-style relative paths "C:foo/bar" where
+ *    the drive letter is accepted but ignored.
  */
 static ssize_t format_track_path(char *dest, char *src, int buf_length,
                                  const char *dir)
@@ -1750,28 +1784,13 @@ static ssize_t format_track_path(char *dest, char *src, int buf_length,
     /* Replace backslashes with forward slashes */
     path_correct_separators(src, src);
 
-    /* Drive letters have no meaning here; handle DOS style drive letter
-     * and parse greedily so that:
-     *
-     * 1) "c:/foo" is fully qualified, use directory volume only
-     * 2) "c:foo" is relative to current directory on C, use directory path
-     *
-     * Assume any volume on the beginning of the directory path is actually
-     * the volume on which it resides. This may not be the case if the dir
-     * param contains a path such as "/<1>/foo/../../<0>/bar", which refers
-     * to "/<0>/bar" (aka "/bar" at this time). *fingers crossed*
-     *
-     * If any stripped drive spec was absolute, prepend the playlist
-     * directory's volume spec, or root if none. Relative paths remain
-     * relative and the playlist's directory fully qualifies them. Absolute
-     * UNIX-style paths remain unaltered.
-     */
+    /* Handle Windows-style absolute paths */
     if (path_strip_drive(src, (const char **)&src, true) >= 0 &&
         src[-1] == PATH_SEPCH)
     {
     #ifdef HAVE_MULTIVOLUME
         const char *p;
-        path_strip_volume(dir, &p, false);
+        path_strip_last_volume(dir, &p, false);
         dir = strmemdupa(dir, p - dir); /* empty if no volspec on dir */
     #else
         dir = "";                       /* only volume is root */
@@ -1782,7 +1801,9 @@ static ssize_t format_track_path(char *dest, char *src, int buf_length,
     if (len >= (size_t)buf_length)
         return -1; /* buffer too small */
 
-    return len;
+    path_remove_dot_segments (dest, dest);
+
+    return strlen (dest);
 }
 
 /*
@@ -2019,7 +2040,7 @@ void playlist_init(void)
     playlist->control_fd = -1;
     playlist->max_playlist_size = global_settings.max_files_in_playlist;
     handle = core_alloc_ex("playlist idx",
-                                playlist->max_playlist_size * sizeof(int), &ops);
+                           playlist->max_playlist_size * sizeof(*playlist->indices), &ops);
     playlist->indices = core_get_data(handle);
     playlist->buffer_size =
         AVERAGE_FILENAME_LENGTH * global_settings.max_files_in_dir;
@@ -2076,13 +2097,10 @@ int playlist_create(const char *dir, const char *file)
 
     if (file)
     {
-        /* dummy ops with no callbacks, needed because by
-         * default buflib buffers can be moved around which must be avoided */
-        static struct buflib_callbacks dummy_ops;
         int handle;
         size_t buflen;
         /* use mp3 buffer for maximum load speed */
-        handle = core_alloc_maximum("temp", &buflen, &dummy_ops);
+        handle = core_alloc_maximum("temp", &buflen, &buflib_ops_locked);
         if (handle > 0)
         {
             /* load the playlist file */
@@ -2091,8 +2109,9 @@ int playlist_create(const char *dir, const char *file)
         }
         else
         {
-            /* should not happen */
-            panicf("%s(): OOM", __func__);
+            /* should not happen -- happens if plugin takes audio buffer */
+            splashf(HZ * 2, "%s(): OOM", __func__);
+            return -1;
         }
     }
 
@@ -2118,20 +2137,25 @@ int playlist_resume(void)
     bool sorted = true;
     int result = -1;
 
-    /* dummy ops with no callbacks, needed because by
-     * default buflib buffers can be moved around which must be avoided */
-    static struct buflib_callbacks dummy_ops;
-    /* use mp3 buffer for maximum load speed */
+    splash(0, ID2P(LANG_WAIT));
     if (core_allocatable() < (1 << 10))
         talk_buffer_set_policy(TALK_BUFFER_LOOSE); /* back off voice buffer */
-    handle = core_alloc_maximum("temp", &buflen, &dummy_ops);
+
+#ifdef HAVE_DIRCACHE
+    dircache_wait(); /* we need the dircache to use the files in the playlist */
+#endif
+
+    /* use mp3 buffer for maximum load speed */
+    handle = core_alloc_maximum("temp", &buflen, &buflib_ops_locked);
     if (handle < 0)
-        panicf("%s(): OOM", __func__);
+    {
+        splashf(HZ * 2, "%s(): OOM", __func__);
+        return -1;
+    }
     buffer = core_get_data(handle);
 
     empty_playlist(playlist, true);
 
-    splash(0, ID2P(LANG_WAIT));
     playlist->control_fd = open(playlist->control_filename, O_RDWR);
     if (playlist->control_fd < 0)
     {
@@ -2207,7 +2231,7 @@ int playlist_resume(void)
 
                         if (!str1)
                         {
-                            result = -1;
+                            result = -2;
                             exit_loop = true;
                             break;
                         }
@@ -2222,7 +2246,7 @@ int playlist_resume(void)
                         
                         if (version != PLAYLIST_CONTROL_FILE_VERSION)
                         {
-                            result = -1;
+                            result = -3;
                             goto out;
                         }
                         
@@ -2256,7 +2280,7 @@ int playlist_resume(void)
                         
                         if (!str1 || !str2 || !str3)
                         {
-                            result = -1;
+                            result = -4;
                             exit_loop = true;
                             break;
                         }
@@ -2272,7 +2296,7 @@ int playlist_resume(void)
                         if (add_track_to_playlist(playlist, str3, position,
                                 queue, total_read+(str3-buffer)) < 0)
                         {
-                            result = -1;
+                            result = -5;
                             goto out;
                         }
                         
@@ -2287,7 +2311,7 @@ int playlist_resume(void)
                         
                         if (!str1)
                         {
-                            result = -1;
+                            result = -6;
                             exit_loop = true;
                             break;
                         }
@@ -2297,7 +2321,7 @@ int playlist_resume(void)
                         if (remove_track_from_playlist(playlist, position,
                                 false) < 0)
                         {
-                            result = -1;
+                            result = -7;
                             goto out;
                         }
 
@@ -2310,7 +2334,7 @@ int playlist_resume(void)
                         
                         if (!str1 || !str2)
                         {
-                            result = -1;
+                            result = -8;
                             exit_loop = true;
                             break;
                         }
@@ -2327,7 +2351,7 @@ int playlist_resume(void)
                         if (randomise_playlist(playlist, seed, false,
                                 false) < 0)
                         {
-                            result = -1;
+                            result = -9;
                             goto out;
                         }
                         sorted = false;
@@ -2338,7 +2362,7 @@ int playlist_resume(void)
                         /* str1=first_index */
                         if (!str1)
                         {
-                            result = -1;
+                            result = -10;
                             exit_loop = true;
                             break;
                         }
@@ -2347,7 +2371,7 @@ int playlist_resume(void)
                         
                         if (sort_playlist(playlist, false, false) < 0)
                         {
-                            result = -1;
+                            result = -11;
                             goto out;
                         }
 
@@ -2376,7 +2400,7 @@ int playlist_resume(void)
                 /* first non-comment line must always specify playlist */
                 if (first && *p != 'P' && *p != '#')
                 {
-                    result = -1;
+                    result = -12;
                     exit_loop = true;
                     break;
                 }
@@ -2387,7 +2411,7 @@ int playlist_resume(void)
                         /* playlist can only be specified once */
                         if (!first)
                         {
-                            result = -1;
+                            result = -13;
                             exit_loop = true;
                             break;
                         }
@@ -2416,7 +2440,7 @@ int playlist_resume(void)
                         current_command = PLAYLIST_COMMAND_COMMENT;
                         break;
                     default:
-                        result = -1;
+                        result = -14;
                         exit_loop = true;
                         break;
                 }
@@ -2461,7 +2485,7 @@ int playlist_resume(void)
 
         if (result < 0)
         {
-            splash(HZ*2, ID2P(LANG_PLAYLIST_CONTROL_INVALID));
+            splashf(HZ*2, "Err: %d, %s", result, str(LANG_PLAYLIST_CONTROL_INVALID));
             goto out;
         }
 
@@ -2476,8 +2500,8 @@ int playlist_resume(void)
             if ((total_read + count) >= control_file_size)
             {
                 /* no newline at end of control file */
-                splash(HZ*2, ID2P(LANG_PLAYLIST_CONTROL_INVALID));
-                result = -1;
+                splashf(HZ*2, "Err: EOF, %s", str(LANG_PLAYLIST_CONTROL_INVALID));
+                result = -15;
                 goto out;
             }
 
@@ -2568,8 +2592,15 @@ unsigned int playlist_get_filename_crc32(struct playlist_info *playlist,
     struct playlist_track_info track_info;
     if (playlist_get_track_info(playlist, index, &track_info) == -1)
         return -1;
-
-    return crc_32(track_info.filename, strlen(track_info.filename), -1);
+    const char *basename;
+#ifdef HAVE_MULTIVOLUME
+    /* remove the volume identifier it might change just use the relative part*/
+    path_strip_volume(track_info.filename, &basename, false);
+    if (basename == NULL)
+#endif
+        basename = track_info.filename;
+    NOTEF("%s: %s", __func__, basename);
+    return crc_32(basename, strlen(basename), -1);
 }
 
 /* resume a playlist track with the given crc_32 of the track name. */
@@ -2950,7 +2981,7 @@ int playlist_set_current(struct playlist_info* playlist)
     if (playlist->indices && playlist->indices != current_playlist.indices)
     {
         memcpy((void*)current_playlist.indices, (void*)playlist->indices,
-               playlist->max_playlist_size*sizeof(int));
+               playlist->max_playlist_size*sizeof(*playlist->indices));
 #ifdef HAVE_DIRCACHE
         copy_filerefs(current_playlist.dcfrefs, playlist->dcfrefs,
                       playlist->max_playlist_size);
