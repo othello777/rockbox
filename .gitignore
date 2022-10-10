@@ -301,3 +301,7 @@ __pycache__
 /utils/regtools/regtool
 /utils/regtools/swiss_knife
 /utils/regtools/tester_v1
+
+#eclipse stuff
+.cproject
+.project
