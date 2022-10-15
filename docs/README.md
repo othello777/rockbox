@@ -3,7 +3,7 @@ I transcoded all of the main DodgeBlock.cs into C code for the ipod.
 It runs on every device that rockbox supports because of the the text 
 interface I think but it hasnt been tested on all.
 
-*DodgeBlock is on testbranch branch!*
+*DodgeBlock is on dodgeblock branch!*
 
 DodgeBlock website: https://dodgeblock.cf
 ## Features
@@ -11,10 +11,10 @@ DodgeBlock website: https://dodgeblock.cf
 - [ ] All Modes
 - [ ] Colors
 - [ ] Music
-- [ ] Settings Menu (Baisc)
+- [x] Settings Menu (Baisc)
 - [ ] New Settings Menu
 - [ ] Saving
-- [ ] New Control Style
+- [x] New Control Style
 
 ```
 _______________________________________________________________________
