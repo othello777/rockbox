@@ -507,6 +507,77 @@ static void InitConsoleColors(void)
 	//StringBuilderSetColor = ConsoleColor.White;
 }
 
+//also ye old code
+static void SettingsMenu(void)
+{
+	//SetFont(1);
+	//PlayingMusic = false;
+
+	//BlueBackground(true);
+	//StringBuilderSetColor(White);
+
+	TextBoxReplace("  \n     ###########Settings###########\n     "
+							"#                            #\n     "
+							"#    Right = Mute/Unmute     #\n     "
+							"#    Left = Control Type     #\n     "
+							"#    Up = Return to Game     #\n     "
+							"#                            #\n     "
+							"##############################\n     ");
+	int ButtonCooldown = 0;
+	bool NotReturned = true;
+
+	while (NotReturned)
+	{
+		if (IsKeyDown(2))
+		{
+			if (UseNewControls == true && ButtonCooldown == 0)
+			{
+				TextBoxWriteLine("Old Control Style");
+				UseNewControls = false;
+				ButtonCooldown = 5;
+			}
+			else if (UseNewControls == false && ButtonCooldown == 0)
+			{
+				TextBoxWriteLine("New Control Style");
+				UseNewControls = true;
+				ButtonCooldown = 5;
+			}
+		}
+
+		if (IsKeyDown(3))
+		{
+			if (MuteMusic == true && ButtonCooldown == 0)
+			{
+				TextBoxWriteLine("Unmuted");
+				MuteMusic = false;
+				ButtonCooldown = 5;
+			}
+			else if (MuteMusic == false && ButtonCooldown == 0)
+			{
+				TextBoxWriteLine("Muted");
+				MuteMusic = true;
+				ButtonCooldown = 5;
+			}
+		}
+
+		if (IsKeyDown(0))
+		{
+			NotReturned = false;
+			InitConsoleColors();
+		}
+
+		if (ButtonCooldown > 0)
+			ButtonCooldown = ButtonCooldown - 1;
+
+		DoSleep(60);
+	}
+	//if (MuteMusic == false)
+	//	PlayingMusic = true;
+	//BlueBackground(false);
+	//SetFont(2);
+
+}
+
 static void TestKeydowns(void)
 {
 	//NativeKeyboard.Update();
@@ -544,7 +615,7 @@ static void TestKeydowns(void)
 	{
 		if (Quitting == false)
 		{
-			//NewSettingsMenu.SettingsMenu();
+			SettingsMenu();
 		}
 
 	}
@@ -1560,70 +1631,6 @@ static void BlockHandling(void)
 
 
 }   //=====/\===================/\======
-
-//also ye old code
-/*static void SettingsMenu()
-{
-	TextBoxReplace("");
-	music.PauseMusic();
-
-	Console.BackgroundColor = ConsoleColor.DarkBlue;
-	Console.ForegroundColor = ConsoleColor.White;
-
-	TextBoxWriteLine(
-"###########Settings###########\n" +
-"#                            #\n" +
-"#    Right = Mute/Unmute     #\n" +
-"#    Left =  Quit & Quit     #\n" +
-"#    Up = Return to Game     #\n" +
-"#                            #\n" +
-"##############################\n");
-	int ButtonCooldown = 0;
-	bool NotReturned = true;
-
-	while (NotReturned)
-	{
-		if (IsKeyDown(2))
-		{
-			Refresh = false;
-			NotReturned = false;
-			InitConsoleColors();
-			Console.ForegroundColor = ConsoleColor.Red;
-		}
-
-		if (IsKeyDown(3))
-		{
-			if (MuteMusic == true && ButtonCooldown == 0)
-			{
-				TextBoxWriteLine("Unmuted");
-				MuteMusic = false;
-				ButtonCooldown = 5;
-			}
-			else if (MuteMusic == false && ButtonCooldown == 0)
-			{
-				TextBoxWriteLine("Muted");
-				MuteMusic = true;
-				ButtonCooldown = 5;
-			}
-
-		}
-
-		if (IsKeyDown(0))
-		{
-			NotReturned = false;
-			InitConsoleColors();
-		}
-
-		if (ButtonCooldown > 0)
-			ButtonCooldown = ButtonCooldown - 1;
-
-		System.Threading.DoSleep(60);
-	}
-	if (MuteMusic == false)
-		music.ResumeMusic();
-	TextBoxReplace("");
-
-}*/
 
 static void StartScreen(void)
 {
