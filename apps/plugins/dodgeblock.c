@@ -38,6 +38,9 @@
 #define RFK_RIGHT         BUTTON_RIGHT
 #define RFK_LEFT          BUTTON_LEFT
 
+int MusicIndex = 0;
+bool PlayingMusic = false;
+bool PlayingSfx = false;
 
 static void dosnprintf(char * buf, int bufsize, char * formatted, ...)
 {
@@ -57,6 +60,10 @@ static void dostrcpy(char * to, const char * from)
 	rb->strcpy(to, from);
 }
 
+//_____________________________________________________________________________________
+// CORE START
+//_____________________________________________________________________________________
+
 //characters
 static char Avatar;
 static char Avatar2;
@@ -68,10 +75,10 @@ static char Block;
 //static Random random2 = new Random(DateTime.Now.Second);
 //static Write write = new Write();
 //static GameMusic music = new GameMusic();
-static char Stringbuilder[400]; // new StringBuilder();
+static char Stringbuilder[777]; // new StringBuilder();
 //static KeyCode PressedKey = KeyCode.None;
 //static KeyCode JustPressedKey = KeyCode.None;
-static char WriteBoard[400];
+static char WriteBoard[777];
 //static char *Version = "1.5.2 - RB";
 //static char *Title = dostrcat("DodgeBlock ", Version);
 static int MaxMode = 4;
@@ -131,11 +138,25 @@ static char BackBoard[20][20];
 static char UseBoard[20][20];
 static int button;
 
-static char slog[7][23];
+static char slog[20][40];
 static int initfill = 0;
 static int vl = 6;
 static bool bluebg = false;
 static int savedkey;
+
+typedef enum {
+		Black,
+		White,
+		Green,
+		Yellow,
+		Magenta,
+		Red,
+		Blue,
+		Cyan,
+		DarkMagenta,
+		DarkGreen,
+		DarkGray
+} ConsoleColor;
 
 static int GetRand(int from, int to)
 {
@@ -147,9 +168,14 @@ static int GetRand2(int from, int to)
 	return GetRand(from, to);
 }
 
+static void SetFont(int fontsz)
+{
+	fontsz++;
+}
+
 static void TextBoxReplace(char *input)
 {
-	char str[rb->strlen(input)];
+	char str[rb->strlen(input) + 1];
 	dostrcpy(str, input);
 	char *save;
 	char delim[] = "\n";
@@ -187,7 +213,7 @@ static void TextBoxWriteLine(char *line)
 		dostrcpy(slog[vl], line);
 
 		dostrcpy(slog[initfill], line);
-		char lined[127] = "";
+		char lined[350];
 		int i = 0;
 		while(i <= vl)
 		{
@@ -233,7 +259,7 @@ static void BlueBackground(bool toggle)
 
 static void DoSleep(int ms)
 {
-	rb->sleep(HZ * ms / 1000);
+	rb->sleep(HZ / 1000.0 * ms);
 }
 
 static bool IsKeyDown(int key)
@@ -241,42 +267,31 @@ static bool IsKeyDown(int key)
 	button = rb->button_status();
 	bool pressed = false;
 
-	switch (button)
-	{
-	case RFK_UP:
-		if(key == 0)
-			pressed = true;
-	  break;
-	case RFK_DOWN:
-		if(key == 1)
-			pressed = true;
-	  break;
-	case RFK_LEFT:
-		if(key == 2)
-			pressed = true;
-	  break;
-	case RFK_RIGHT:
-		if(key == 3)
-			pressed = true;
-	  break;
-	}
+	if(button == RFK_UP && key == 0)
+		pressed = true;
+	if(button == RFK_DOWN && key == 1)
+		pressed = true;
+	if(button == RFK_LEFT && key == 2)
+		pressed = true;
+	if(button == RFK_RIGHT && key == 3)
+		pressed = true;
 
 	if(pressed)
-		{
-			if(key == savedkey)
-			{
-				return false;
-			}
-			else
-			{
-				if(UseNewControls)
-					savedkey = key;
-				return true;
-			}
-		}
+	{
 		if(key == savedkey)
-			savedkey = -1;
-		return false;
+		{
+			return false;
+		}
+		else
+		{
+			if(UseNewControls)
+				savedkey = key;
+			return true;
+		}
+	}
+	if(key == savedkey)
+		savedkey = -1;
+	return false;
 }
 
 static void Initialize(void)
@@ -301,7 +316,7 @@ static void Initialize(void)
 	timer100 = 0;
 	timer300 = 0;
 	snowflaketimer = 0;
-	HighScore = 1530;
+	HighScore = 153;
 	//WriteBoard = "";
 	//settingslocation = "Settings.txt";
 	if (GetRand2(0, 10) % 2 == 1)
@@ -543,20 +558,65 @@ static void Initialize(void)
 	}
 }*/
 
+static void StringBuilderSetColor(int color)
+{
+	return;
+	switch (color)
+	{
+		case Black:
+			 dostrcat(Stringbuilder,"\\cf0");
+			break;
+		case White:
+			 dostrcat(Stringbuilder,"\\cf1");
+			break;
+		case Green:
+			 dostrcat(Stringbuilder,"\\cf2");
+			break;
+		case Yellow:
+			 dostrcat(Stringbuilder,"\\cf3");
+			break;
+		case Magenta:
+			 dostrcat(Stringbuilder,"\\cf4");
+			break;
+		case Red:
+			 dostrcat(Stringbuilder,"\\cf5");
+			break;
+		case Blue:
+			 dostrcat(Stringbuilder,"\\cf6");
+			break;
+		case Cyan:
+			 dostrcat(Stringbuilder,"\\cf7");
+			break;
+		case DarkMagenta:
+			 dostrcat(Stringbuilder,"\\cf8");
+			break;
+		case DarkGreen:
+			 dostrcat(Stringbuilder,"\\cf9");
+			break;
+		/*case DarkGray:
+			 dostrcat(Stringbuilder,"\\cf10");
+			break;*/
+		default:
+			 dostrcat(Stringbuilder,"\\cf1");
+			break;
+
+	}
+}
+
 static void InitConsoleColors(void)
 {
 	//StringBuilderSetBackgroundColor = ConsoleColor.Black;
-	//StringBuilderSetColor = ConsoleColor.White;
+	StringBuilderSetColor(White);
 }
 
 //also ye old code
 static void SettingsMenu(void)
 {
-	//SetFont(1);
-	//PlayingMusic = false;
+	SetFont(1);
+	PlayingMusic = false;
 
 	BlueBackground(true);
-	//StringBuilderSetColor(White);
+	StringBuilderSetColor(White);
 
 	TextBoxReplace("  \n     ###########Settings###########\n     "
 							"#                            #\n     "
@@ -613,10 +673,10 @@ static void SettingsMenu(void)
 
 		DoSleep(60);
 	}
-	//if (MuteMusic == false)
-	//	PlayingMusic = true;
+	if (MuteMusic == false)
+		PlayingMusic = true;
 	BlueBackground(false);
-	//SetFont(2);
+	SetFont(2);
 
 }
 
@@ -685,57 +745,7 @@ static void PositionPlayers(void)
 	}
 }
 
-/*static ConsoleColor StringBuilderSetColor
-{
-	set
-	{
-
-		switch (value)
-		{
-			case ConsoleColor.Black:
-				 dostrcat(Stringbuilder,"\cf0");
-				break;
-			case ConsoleColor.White:
-				 dostrcat(Stringbuilder,"\cf1");
-				break;
-			case ConsoleColor.Green:
-				 dostrcat(Stringbuilder,"\cf2");
-				break;
-			case ConsoleColor.Yellow:
-				 dostrcat(Stringbuilder,"\cf3");
-				break;
-			case ConsoleColor.Magenta:
-				 dostrcat(Stringbuilder,"\cf4");
-				break;
-			case ConsoleColor.Red:
-				 dostrcat(Stringbuilder,"\cf5");
-				break;
-			case ConsoleColor.Blue:
-				 dostrcat(Stringbuilder,"\cf6");
-				break;
-			case ConsoleColor.Cyan:
-				 dostrcat(Stringbuilder,"\cf7");
-				break;
-			case ConsoleColor.DarkMagenta:
-				 dostrcat(Stringbuilder,"\cf8");
-				break;
-			case ConsoleColor.DarkGreen:
-				 dostrcat(Stringbuilder,"\cf9");
-				break;
-			case ConsoleColor.DarkGray:
-				 dostrcat(Stringbuilder,"\cf10");
-				break;
-			default:
-				 dostrcat(Stringbuilder,"\cf1");
-				break;
-
-		}
-
-
-	}
-}
-
-static ConsoleColor StringBuilderSetBackgroundColor
+/*static ConsoleColor StringBuilderSetBackgroundColor
 {
 	set
 	{
@@ -781,17 +791,17 @@ static void InitStringBuilder(void)
 	//prepare Stringbuilder
 	dostrcpy(Stringbuilder, "");
 	//Stringbuilder +=  ("" + BoardSize);
-	//StringBuilderSetColor = color;
+	StringBuilderSetColor(White);
 	//if (Mode == 4 && customModeC.CustomModeAble)
 	//	 dostrcat(Stringbuilder,"        Score:" + Score +  @" \n\n "
 	//	   + "                     " + Math.Round(BenchFPS.DoGetFps(), 5) + "FPS");
 	//else
 	char smolbuf1[20];
-	dosnprintf(smolbuf1, 20, "        Score: %d", Score);
+	dosnprintf(smolbuf1, 20, "       Score: %d", Score);
 	//dostrcat(Stringbuilder, smolbuf1);
 
 	char smolbuf2[40];
-	dosnprintf(smolbuf2, 40, "%s\n   High Score: %d\n", smolbuf1, HighScore);
+	dosnprintf(smolbuf2, 40, "%s\n  High Score: %d\n", smolbuf1, HighScore);
 	dostrcat(Stringbuilder, smolbuf2);
 	//+ "                     " + Math.Round(BenchFPS.DoGetFps(), 5) + "FPS");
 }
@@ -815,9 +825,9 @@ static void BoardAppend(void)
 	if (Mode == 1 /*|| Mode == 4 && !customModeC.CustomModeAble*/)
 	{
 		char smolbuf1[20];
-		dosnprintf(smolbuf1, 20, "\n\n Ammo = %d", Ammo);
+		dosnprintf(smolbuf1, 20, "\n\n  Ammo=%d", Ammo);
 		char smolbuf2[40];
-		dosnprintf(smolbuf2, 40, "%s Shields = %d\n", smolbuf1, Shields);
+		dosnprintf(smolbuf2, 40, "%s Shields=%d\n", smolbuf1, Shields);
 		dostrcat(Stringbuilder, smolbuf2);
 
 		InitConsoleColors();
@@ -830,6 +840,25 @@ static bool CheckPointFlasher(void)
 		if ((Score >= 1000 && Score <= 1010) || (Score >= 500 && Score <= 510))
 			return true;
 	return false;
+}
+
+static void SetCharacterColor(char character)
+{
+	switch(character)
+	{
+	case 'O':
+			StringBuilderSetColor(Cyan);
+		break;
+	case '.':
+			StringBuilderSetColor(Blue);
+			break;
+	case '$':
+			StringBuilderSetColor(Magenta);
+			break;
+	case '%':
+			StringBuilderSetColor(White);
+			break;
+	}
 }
 
 static void WriteToScreen(void)
@@ -856,17 +885,18 @@ static void WriteToScreen(void)
 
 	for (int i = GameHeight - 1; i >= 0; i--)
 	{
-		if (/*(Score == HighScore && !(Mode == 4 && customModeC.CustomModeAble) && Flasher()) ||*/
-(ScoreFlashTimer <= TimerCounter && ScoreFlashTimer > TimerCounter - 10 && ColorMode == true && TimerCounter > 20) ||
+		if ((Score == HighScore && !(Mode == 4/* && customModeC.CustomModeAble*/) && Flasher()) ||
+			(ScoreFlashTimer <= TimerCounter && ScoreFlashTimer > TimerCounter - 10 && TimerCounter > 20) ||
 			CheckPointFlasher())
 		{
-			//StringBuilderSetColor = ConsoleColor.Yellow;
+			StringBuilderSetColor(Yellow);
 
-			/*if (ScoreFlashTimer <= TimerCounter && ScoreFlashTimer > TimerCounter - 10 && ColorMode == true && TimerCounter > 20)
-				StringBuilderSetColor = ConsoleColor.Magenta;
+			if (ScoreFlashTimer <= TimerCounter && ScoreFlashTimer >
+			TimerCounter - 10 && ColorMode == true && TimerCounter > 20)
+				StringBuilderSetColor(Magenta);
 
 			if(CheckPointFlasher())
-				StringBuilderSetColor = ConsoleColor.Cyan;*/
+				StringBuilderSetColor(Cyan);
 			 dostrcat(Stringbuilder,"\n  | ");
 			InitConsoleColors();
 		}
@@ -878,7 +908,8 @@ static void WriteToScreen(void)
 		{
 			//StringBuilderSetBackgroundColor = UseBoard[j, i].BackColor;
 
-			//StringBuilderSetColor = UseBoard[j, i].Color;
+			//StringBuilderSetColor(UseBoard[j, i].Color);
+			SetCharacterColor((char)UseBoard[j][i]);
 			//dosnprintf(Stringbuilder, 200, "%s", Stringbuilder);//, UseBoard[j][i]);
 			char ape[2];// = {((char)UseBoard[j][i])};
 			dosnprintf(ape, 2, "%c", (char)UseBoard[j][i]);
@@ -892,16 +923,16 @@ static void WriteToScreen(void)
 			(ScoreFlashTimer <= TimerCounter && ScoreFlashTimer > TimerCounter - 10 && TimerCounter > 20) ||
 			CheckPointFlasher())
 		{
-			/*StringBuilderSetColor = ConsoleColor.Yellow;
-			Console.BackgroundColor = ConsoleColor.Black;
+			StringBuilderSetColor(Yellow);
+			//Console.BackgroundColor = ConsoleColor.Black;
 
 			if (ScoreFlashTimer <= TimerCounter && ScoreFlashTimer > TimerCounter - 10 && TimerCounter > 20)
-				StringBuilderSetColor = ConsoleColor.Magenta;
+				StringBuilderSetColor(Magenta);
 
 			if (CheckPointFlasher())
-				StringBuilderSetColor = ConsoleColor.Cyan;*/
+				StringBuilderSetColor(Cyan);
 
-			 dostrcat(Stringbuilder,"  |");
+			 dostrcat(Stringbuilder," |");
 		}
 		else
 		{
@@ -1008,8 +1039,8 @@ static void DeathScreen(int Place)
 	{
 		 dostrcpy(Stringbuilder, "");
 		 //dostrcat(Stringbuilder, BoardSize);
-		//StringBuilderSetColor = ConsoleColor.Red;
-		 dostrcat(Stringbuilder,"\n\n\n ");
+		StringBuilderSetColor(Red);
+		 dostrcat(Stringbuilder,"\n\n\n \n\n ");
 	}
 	if (ColorMode)
 	{
@@ -1110,7 +1141,7 @@ static void ResetGame(void)
 	{
 		for (int j = 0; j < GameWidth; j++)
 		{
-			BackBoard[j][i] = '.';
+			UseBoard[j][i] = '.';
 		}
 	}
 	//UseBoard = BackBoard.Clone() as char[,];
@@ -1146,12 +1177,12 @@ static void DoCheckPoints(int savescore)
 static void OnDeath(int j)
 {
 	(void)j;
-	/*music.PauseMusic();
+	PlayingMusic = false;
 
 	if (MuteSfx == false)
-		music.DieNoise();
+		PlayingSfx = true;
 
-	// log highscore
+	/*// log highscore
 	if (loadsuccess && Score == HighScore && !(Mode == 4 && customModeC.CustomModeAble))
 	{
 		if (Mode == 0)
@@ -1184,10 +1215,10 @@ static void OnDeath(int j)
 			 dostrcat(Stringbuilder,"" + BoardSize + " ");
 		}
 		else
-		{
-			StringBuilderSetColor = ConsoleColor.Cyan;
-			 dostrcat(Stringbuilder,"" + BoardSize + " ");
-		}*/
+		{*/
+			StringBuilderSetColor(Cyan);
+			 //dostrcat(Stringbuilder,"" + BoardSize + " ");
+		//}
 	}
 	// add endline
 	void LineBreak(void)
@@ -1222,7 +1253,7 @@ static void OnDeath(int j)
 	{*/
 		DeathScreen(Position);
 		OnPostDeathScreen();
-		dostrcat(Stringbuilder,"You Died!");
+		dostrcat(Stringbuilder,"\n  You Died!");
 	//}
 	LineBreak();
 
@@ -1230,12 +1261,13 @@ static void OnDeath(int j)
 
 	// add the results
 	char smolbuf1[20];
-	dosnprintf(smolbuf1, 20, "Your Score: %d", Score);
+	dosnprintf(smolbuf1, 20, "  Your Score: %d", Score);
 	dostrcat(Stringbuilder, smolbuf1);
 	LineBreak();
 	if (Score >= HighScore)
 	{
-		dostrcat(Stringbuilder,"*New High Score!*");
+		StringBuilderSetColor(Yellow);
+		dostrcat(Stringbuilder,"  *New High Score!*");
 		/*if (ColorMode)
 			StringBuilderSetColor = ConsoleColor.Yellow;
 
@@ -1249,21 +1281,22 @@ static void OnDeath(int j)
 		}
 		else
 		{
-			StringBuilderSetColor = ConsoleColor.Cyan;
-		}*/
+			StringBuilderSetColor = ConsoleColor.Cyan;*/
+			StringBuilderSetColor(Cyan);
+		//}
 		LineBreak();
 	}
 	else
 	{
 		char smolbuf2[20];
-		dosnprintf(smolbuf2, 20, "High Score: %d", HighScore);
+		dosnprintf(smolbuf2, 20, "  High Score: %d", HighScore);
 		dostrcat(Stringbuilder, smolbuf2);
 		LineBreak();
 	}
 
 
 
-	dostrcat(Stringbuilder,"Playing: ");
+	dostrcat(Stringbuilder,"  Playing: \n  ");
 	if (Mode == 0)
 	{
 		 dostrcat(Stringbuilder,"Classic Mode");
@@ -1308,9 +1341,9 @@ static void OnDeath(int j)
 
 	LineBreak();
 	LineBreak();
-	 dostrcat(Stringbuilder,"Press Up to Continue");
+	 dostrcat(Stringbuilder," \n  Up to Continue");
 	LineBreak();
-	 dostrcat(Stringbuilder,"Press Down to Quit");
+	 dostrcat(Stringbuilder,"  Down to Quit");
 
 	dostrcpy(WriteBoard, Stringbuilder);;
 	if (ColorMode)
@@ -1371,8 +1404,8 @@ static void OnDeath(int j)
 	ResetGame();
 	DoCheckPoints(savescore);
 
-	//if (MuteMusic == false)
-	//	music.ResumeMusic();
+	if (MuteMusic == false)
+		PlayingMusic = true;
 	InitConsoleColors();
 }
 
@@ -1679,8 +1712,8 @@ static void StartScreen(void)
 	TextBoxWriteLine("CONGRATS! starting.");
 	DoSleep(1000);
 
-	/*if(IsChristmas)
-		Cutscene();*/
+	//if(IsChristmas)
+	//	Cutscene();
 
 	int anim = 0;
 
@@ -1922,11 +1955,13 @@ static void Game(void)
 
 	//InternetConnect();
 
-	TextBoxWriteLine("Start Screen");
+	TextBoxWriteLine("Start Game");
+	DoSleep(200);
 	StartScreen();
 
 	//if (MuteMusic)
 	//	music.PauseMusic();
+	PlayingMusic = true;
 
 	if (Mode > MaxMode)
 	{
@@ -1945,15 +1980,10 @@ static void Game(void)
 
 	TextBoxWriteLineRtf("\nQuitting...");
 
-	/*if (MuteMusic == false)
-		music.TerminateMusic();
-	else
-	{
-		music.ResumeMusic();
-		music.TerminateMusic();
-	}
+	PlayingMusic = false;
+	MusicIndex = 0;
 
-	DiscordDB.die();*/
+	//DiscordDB.die();
 
 	DoSleep(1000);
 	//CloseThis();
@@ -1967,7 +1997,14 @@ enum plugin_status plugin_start(const void* parameter)
     (void)parameter;
     //rb->keyclick_click();
     rb->splash(HZ*1, "Dodgeblock Init");
-    rb->lcd_setfont(-1);//FONT_SYSFIXED);
+    //rb->lcd_setfont(FONT_SYSFIXED);
+
+    char buf[MAX_PATH];
+    rb->snprintf(buf, MAX_PATH, FONT_DIR "/20-Terminus-Bold.fnt");
+    rb->lcd_setfont(rb->font_load(buf));
+    rb->lcd_set_foreground(LCD_WHITE);
+	rb->lcd_set_background(LCD_BLACK);
+
     Game();
 
     /* "rb->" marks a plugin api call. Rockbox offers many of its built-in
