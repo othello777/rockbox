@@ -38,6 +38,25 @@
 #define RFK_RIGHT         BUTTON_RIGHT
 #define RFK_LEFT          BUTTON_LEFT
 
+
+static void dosnprintf(char * buf, int bufsize, char * formatted, ...)
+{
+	va_list va;
+	va_start (va, formatted);
+	rb->vsnprintf(buf, bufsize, formatted, va);
+	va_end (va);
+}
+
+static void dostrcat(char * to, const char * from)
+{
+	rb->strcat(to, from);
+}
+
+static void dostrcpy(char * to, const char * from)
+{
+	rb->strcpy(to, from);
+}
+
 //characters
 static char Avatar;
 static char Avatar2;
@@ -54,7 +73,7 @@ static char Stringbuilder[400]; // new StringBuilder();
 //static KeyCode JustPressedKey = KeyCode.None;
 static char WriteBoard[400];
 //static char *Version = "1.5.2 - RB";
-//static char *Title = rb->strcat("DodgeBlock ", Version);
+//static char *Title = dostrcat("DodgeBlock ", Version);
 static int MaxMode = 4;
 //static char *settingslocation;
 //static char *SecretCode = "You have not died yet.";
@@ -131,7 +150,7 @@ static int GetRand2(int from, int to)
 static void TextBoxReplace(char *input)
 {
 	char str[rb->strlen(input)];
-	rb->strcpy(str, input);
+	dostrcpy(str, input);
 	char *save;
 	char delim[] = "\n";
 
@@ -162,18 +181,18 @@ static void TextBoxWriteLine(char *line)
 		int n = 1;
 		while(n <= vl)
 		{
-			rb->strcpy(slog[n - 1], slog[n]);
+			dostrcpy(slog[n - 1], slog[n]);
 			n = n + 1;
 		}
-		rb->strcpy(slog[vl], line);
+		dostrcpy(slog[vl], line);
 
-		rb->strcpy(slog[initfill], line);
+		dostrcpy(slog[initfill], line);
 		char lined[127] = "";
 		int i = 0;
 		while(i <= vl)
 		{
-			rb->strcat(lined, "\n");
-			rb->strcat(lined, slog[i]);
+			dostrcat(lined, "\n");
+			dostrcat(lined, slog[i]);
 			i = i + 1;
 		}
 		TextBoxReplace(lined);
@@ -181,14 +200,14 @@ static void TextBoxWriteLine(char *line)
 	else
 	{
 		//puts("log3");
-		rb->strcpy(slog[initfill], line);
+		dostrcpy(slog[initfill], line);
 		char lined[64] = "";
 		int i = 0;
 		//puts("log4");
 		while(i <= vl)
 		{
-			rb->strcat(lined, "\n");
-			rb->strcat(lined, slog[i]);
+			dostrcat(lined, "\n");
+			dostrcat(lined, slog[i]);
 			i = i + 1;
 		}
 		//puts("log5");
@@ -355,7 +374,7 @@ static void Initialize(void)
 			UseBoard[j][i] = '.';
 		}
 	}
-	//rb->strcpy(UseBoard, BackBoard);//.Clone() as char[,];
+	//dostrcpy(UseBoard, BackBoard);//.Clone() as char[,];
 
 	//DiscordDB.DoesWork = false;//= DiscordDB.DiscordInit();
 
@@ -674,40 +693,40 @@ static void PositionPlayers(void)
 		switch (value)
 		{
 			case ConsoleColor.Black:
-				 rb->strcat(Stringbuilder,"\cf0");
+				 dostrcat(Stringbuilder,"\cf0");
 				break;
 			case ConsoleColor.White:
-				 rb->strcat(Stringbuilder,"\cf1");
+				 dostrcat(Stringbuilder,"\cf1");
 				break;
 			case ConsoleColor.Green:
-				 rb->strcat(Stringbuilder,"\cf2");
+				 dostrcat(Stringbuilder,"\cf2");
 				break;
 			case ConsoleColor.Yellow:
-				 rb->strcat(Stringbuilder,"\cf3");
+				 dostrcat(Stringbuilder,"\cf3");
 				break;
 			case ConsoleColor.Magenta:
-				 rb->strcat(Stringbuilder,"\cf4");
+				 dostrcat(Stringbuilder,"\cf4");
 				break;
 			case ConsoleColor.Red:
-				 rb->strcat(Stringbuilder,"\cf5");
+				 dostrcat(Stringbuilder,"\cf5");
 				break;
 			case ConsoleColor.Blue:
-				 rb->strcat(Stringbuilder,"\cf6");
+				 dostrcat(Stringbuilder,"\cf6");
 				break;
 			case ConsoleColor.Cyan:
-				 rb->strcat(Stringbuilder,"\cf7");
+				 dostrcat(Stringbuilder,"\cf7");
 				break;
 			case ConsoleColor.DarkMagenta:
-				 rb->strcat(Stringbuilder,"\cf8");
+				 dostrcat(Stringbuilder,"\cf8");
 				break;
 			case ConsoleColor.DarkGreen:
-				 rb->strcat(Stringbuilder,"\cf9");
+				 dostrcat(Stringbuilder,"\cf9");
 				break;
 			case ConsoleColor.DarkGray:
-				 rb->strcat(Stringbuilder,"\cf10");
+				 dostrcat(Stringbuilder,"\cf10");
 				break;
 			default:
-				 rb->strcat(Stringbuilder,"\cf1");
+				 dostrcat(Stringbuilder,"\cf1");
 				break;
 
 		}
@@ -724,31 +743,31 @@ static ConsoleColor StringBuilderSetBackgroundColor
 		switch (value)
 		{
 			case ConsoleColor.Black:
-				 rb->strcat(Stringbuilder,"\highlight0");
+				 dostrcat(Stringbuilder,"\highlight0");
 				break;
 			case ConsoleColor.White:
-				 rb->strcat(Stringbuilder,"\highlight1");
+				 dostrcat(Stringbuilder,"\highlight1");
 				break;
 			case ConsoleColor.Magenta:
-				 rb->strcat(Stringbuilder,"\highlight4");
+				 dostrcat(Stringbuilder,"\highlight4");
 				break;
 			case ConsoleColor.Green:
-				 rb->strcat(Stringbuilder,"\highlight2");
+				 dostrcat(Stringbuilder,"\highlight2");
 				break;
 			case ConsoleColor.Yellow:
-				 rb->strcat(Stringbuilder,"\highlight3");
+				 dostrcat(Stringbuilder,"\highlight3");
 				break;
 			case ConsoleColor.Red:
-				 rb->strcat(Stringbuilder,"\highlight5");
+				 dostrcat(Stringbuilder,"\highlight5");
 				break;
 			case ConsoleColor.Blue:
-				 rb->strcat(Stringbuilder,"\highlight6");
+				 dostrcat(Stringbuilder,"\highlight6");
 				break;
 			case ConsoleColor.Cyan:
-				 rb->strcat(Stringbuilder,"\highlight7");
+				 dostrcat(Stringbuilder,"\highlight7");
 				break;
 			default:
-				 rb->strcat(Stringbuilder,"\highlight0");
+				 dostrcat(Stringbuilder,"\highlight0");
 				break;
 
 		}
@@ -760,20 +779,20 @@ static ConsoleColor StringBuilderSetBackgroundColor
 static void InitStringBuilder(void)
 {
 	//prepare Stringbuilder
-	rb->strcpy(Stringbuilder, "");
+	dostrcpy(Stringbuilder, "");
 	//Stringbuilder +=  ("" + BoardSize);
 	//StringBuilderSetColor = color;
 	//if (Mode == 4 && customModeC.CustomModeAble)
-	//	 rb->strcat(Stringbuilder,"        Score:" + Score +  @" \n\n "
+	//	 dostrcat(Stringbuilder,"        Score:" + Score +  @" \n\n "
 	//	   + "                     " + Math.Round(BenchFPS.DoGetFps(), 5) + "FPS");
 	//else
 	char smolbuf1[20];
-	rb->snprintf(smolbuf1, 20, "        Score: %d", Score);
-	//rb->strcat(Stringbuilder, smolbuf1);
+	dosnprintf(smolbuf1, 20, "        Score: %d", Score);
+	//dostrcat(Stringbuilder, smolbuf1);
 
 	char smolbuf2[40];
-	rb->snprintf(smolbuf2, 40, "%s\n   High Score: %d\n", smolbuf1, HighScore);
-	rb->strcat(Stringbuilder, smolbuf2);
+	dosnprintf(smolbuf2, 40, "%s\n   High Score: %d\n", smolbuf1, HighScore);
+	dostrcat(Stringbuilder, smolbuf2);
 	//+ "                     " + Math.Round(BenchFPS.DoGetFps(), 5) + "FPS");
 }
 
@@ -796,10 +815,10 @@ static void BoardAppend(void)
 	if (Mode == 1 /*|| Mode == 4 && !customModeC.CustomModeAble*/)
 	{
 		char smolbuf1[20];
-		rb->snprintf(smolbuf1, 20, "\n\n Ammo = %d", Ammo);
+		dosnprintf(smolbuf1, 20, "\n\n Ammo = %d", Ammo);
 		char smolbuf2[40];
-		rb->snprintf(smolbuf2, 40, "%s Shields = %d\n", smolbuf1, Shields);
-		rb->strcat(Stringbuilder, smolbuf2);
+		dosnprintf(smolbuf2, 40, "%s Shields = %d\n", smolbuf1, Shields);
+		dostrcat(Stringbuilder, smolbuf2);
 
 		InitConsoleColors();
 	}
@@ -848,11 +867,11 @@ static void WriteToScreen(void)
 
 			if(CheckPointFlasher())
 				StringBuilderSetColor = ConsoleColor.Cyan;*/
-			 rb->strcat(Stringbuilder,"\n  | ");
+			 dostrcat(Stringbuilder,"\n  | ");
 			InitConsoleColors();
 		}
 		else
-			 rb->strcat(Stringbuilder,"\n    ");
+			 dostrcat(Stringbuilder,"\n    ");
 
 		//static char Buff[200];
 		for (int j = 0; j < GameWidth; j++)
@@ -860,14 +879,14 @@ static void WriteToScreen(void)
 			//StringBuilderSetBackgroundColor = UseBoard[j, i].BackColor;
 
 			//StringBuilderSetColor = UseBoard[j, i].Color;
-			//rb->snprintf(Stringbuilder, 200, "%s", Stringbuilder);//, UseBoard[j][i]);
+			//dosnprintf(Stringbuilder, 200, "%s", Stringbuilder);//, UseBoard[j][i]);
 			char ape[2];// = {((char)UseBoard[j][i])};
-			rb->snprintf(ape, 2, "%c", (char)UseBoard[j][i]);
-			rb->strcat(Stringbuilder, ape);
-			//char *a = rb->strcat("","");
+			dosnprintf(ape, 2, "%c", (char)UseBoard[j][i]);
+			dostrcat(Stringbuilder, ape);
+			//char *a = dostrcat("","");
 		}
 
-		// rb->strcat(Stringbuilder,"\highlight0 ");
+		// dostrcat(Stringbuilder,"\highlight0 ");
 
 		if ((Score == HighScore && !(Mode == 4/* && customModeC.CustomModeAble*/) && Flasher()) ||
 			(ScoreFlashTimer <= TimerCounter && ScoreFlashTimer > TimerCounter - 10 && TimerCounter > 20) ||
@@ -882,20 +901,20 @@ static void WriteToScreen(void)
 			if (CheckPointFlasher())
 				StringBuilderSetColor = ConsoleColor.Cyan;*/
 
-			 rb->strcat(Stringbuilder,"  |");
+			 dostrcat(Stringbuilder,"  |");
 		}
 		else
 		{
-			 rb->strcat(Stringbuilder,"  ");
+			 dostrcat(Stringbuilder,"  ");
 		}
 		InitConsoleColors();
 
 		for (int m = 0; m < Margin; m++)
 		{
-			 rb->strcat(Stringbuilder," ");
+			 dostrcat(Stringbuilder," ");
 		}
 		//if (GameHeight - 1 - i < sizeof BoardToSide / sizeof BoardToSide[0])
-		//	 rb->strcat(Stringbuilder,BoardToSide[GameHeight - 1 - i]);
+		//	 dostrcat(Stringbuilder,BoardToSide[GameHeight - 1 - i]);
 
 
 
@@ -903,7 +922,7 @@ static void WriteToScreen(void)
 
 	BoardAppend();
 
-	rb->strcpy(WriteBoard, Stringbuilder);
+	dostrcpy(WriteBoard, Stringbuilder);
 	TextBoxReplaceRtf(WriteBoard);
 }
 
@@ -947,50 +966,50 @@ static void StringBuilderBuild(void)
 			if ((Score == HighScore && Flasher()) || (ScoreFlashTimer <= TimerCounter &&
 				ScoreFlashTimer > TimerCounter - 10 && TimerCounter > 20))
 			{
-				 rb->strcat(Stringbuilder,"\n  | ");
+				 dostrcat(Stringbuilder,"\n  | ");
 			}
 			else
-				 rb->strcat(Stringbuilder,"\n    ");
+				 dostrcat(Stringbuilder,"\n    ");
 		}
 		else
 		{
 			if ((Score == HighScore && Flasher()) || (ScoreFlashTimer <= TimerCounter &&
 				ScoreFlashTimer > TimerCounter - 10 && TimerCounter > 20))
 			{
-				 rb->strcat(Stringbuilder,"\n  | ");
+				 dostrcat(Stringbuilder,"\n  | ");
 			}
 			else
-				 rb->strcat(Stringbuilder,"\n    ");
+				 dostrcat(Stringbuilder,"\n    ");
 		}
 		for (int j = 0; j < GameWidth; j++)
 		{
-			 //rb->strcat(Stringbuilder,(char)UseBoard[j][i]);
+			 //dostrcat(Stringbuilder,(char)UseBoard[j][i]);
 			char ape[2];// = {((char)UseBoard[j][i])};
-			rb->snprintf(ape, 2, "%c", (char)UseBoard[j][i]);
-			rb->strcat(Stringbuilder, ape);
+			dosnprintf(ape, 2, "%c", (char)UseBoard[j][i]);
+			dostrcat(Stringbuilder, ape);
 		}
 
 		if ((Score == HighScore && Flasher()) || (ScoreFlashTimer <= TimerCounter &&
 			ScoreFlashTimer > TimerCounter - 10 && TimerCounter > 20))
 		{
 
-			 rb->strcat(Stringbuilder," |  ");
+			 dostrcat(Stringbuilder," |  ");
 
 		}
 
 	}
 
-	rb->strcpy(WriteBoard, Stringbuilder);;
+	dostrcpy(WriteBoard, Stringbuilder);;
 }
 
 static void DeathScreen(int Place)
 {
 	void deathinit(void)
 	{
-		 rb->strcpy(Stringbuilder, "");
-		 //rb->strcat(Stringbuilder, BoardSize);
+		 dostrcpy(Stringbuilder, "");
+		 //dostrcat(Stringbuilder, BoardSize);
 		//StringBuilderSetColor = ConsoleColor.Red;
-		 rb->strcat(Stringbuilder,"\n\n\n ");
+		 dostrcat(Stringbuilder,"\n\n\n ");
 	}
 	if (ColorMode)
 	{
@@ -1152,29 +1171,29 @@ static void OnDeath(int j)
 	// setting deathscreen
 	void OnPostDeathScreen(void)
 	{
-		rb->strcpy(Stringbuilder, "");
+		dostrcpy(Stringbuilder, "");
 
 		/*if (IsHolloween)
 		{
 			StringBuilderSetColor = ConsoleColor.DarkMagenta;
-			 rb->strcat(Stringbuilder,"" + BoardSize + " ");
+			 dostrcat(Stringbuilder,"" + BoardSize + " ");
 		}
 		else if (IsThanksgiving)
 		{
 			StringBuilderSetColor = ConsoleColor.DarkGray;
-			 rb->strcat(Stringbuilder,"" + BoardSize + " ");
+			 dostrcat(Stringbuilder,"" + BoardSize + " ");
 		}
 		else
 		{
 			StringBuilderSetColor = ConsoleColor.Cyan;
-			 rb->strcat(Stringbuilder,"" + BoardSize + " ");
+			 dostrcat(Stringbuilder,"" + BoardSize + " ");
 		}*/
 	}
 	// add endline
 	void LineBreak(void)
 	{
 		if (ColorMode)
-			rb->strcat(Stringbuilder,"\n");
+			dostrcat(Stringbuilder,"\n");
 	}
 
 	// kill the bloody loser
@@ -1184,26 +1203,26 @@ static void OnDeath(int j)
 		{
 			DeathScreen(Position);
 			OnPostDeathScreen();
-			 rb->strcat(Stringbuilder,"Both Players Died!");
+			 dostrcat(Stringbuilder,"Both Players Died!");
 		}
 		else if (j == Position2)
 		{
 			DeathScreen(Position2);
 			OnPostDeathScreen();
-			 rb->strcat(Stringbuilder,"Player2 Died! (" + Avatar2 + ")");
+			 dostrcat(Stringbuilder,"Player2 Died! (" + Avatar2 + ")");
 		}
 		else
 		{
 			DeathScreen(Position);
 			OnPostDeathScreen();
-			 rb->strcat(Stringbuilder,"Player1 Died! (" + Avatar + ")");
+			 dostrcat(Stringbuilder,"Player1 Died! (" + Avatar + ")");
 		}
 	}
 	else
 	{*/
 		DeathScreen(Position);
 		OnPostDeathScreen();
-		rb->strcat(Stringbuilder,"You Died!");
+		dostrcat(Stringbuilder,"You Died!");
 	//}
 	LineBreak();
 
@@ -1211,12 +1230,12 @@ static void OnDeath(int j)
 
 	// add the results
 	char smolbuf1[20];
-	rb->snprintf(smolbuf1, 20, "Your Score: %d", Score);
-	rb->strcat(Stringbuilder, smolbuf1);
+	dosnprintf(smolbuf1, 20, "Your Score: %d", Score);
+	dostrcat(Stringbuilder, smolbuf1);
 	LineBreak();
 	if (Score >= HighScore)
 	{
-		rb->strcat(Stringbuilder,"*New High Score!*");
+		dostrcat(Stringbuilder,"*New High Score!*");
 		/*if (ColorMode)
 			StringBuilderSetColor = ConsoleColor.Yellow;
 
@@ -1237,63 +1256,63 @@ static void OnDeath(int j)
 	else
 	{
 		char smolbuf2[20];
-		rb->snprintf(smolbuf2, 20, "High Score: %d", HighScore);
-		rb->strcat(Stringbuilder, smolbuf2);
+		dosnprintf(smolbuf2, 20, "High Score: %d", HighScore);
+		dostrcat(Stringbuilder, smolbuf2);
 		LineBreak();
 	}
 
 
 
-	rb->strcat(Stringbuilder,"Playing: ");
+	dostrcat(Stringbuilder,"Playing: ");
 	if (Mode == 0)
 	{
-		 rb->strcat(Stringbuilder,"Classic Mode");
+		 dostrcat(Stringbuilder,"Classic Mode");
 	}
 	else if (Mode == 1)
 	{
-		 rb->strcat(Stringbuilder,"Normal Mode");
+		 dostrcat(Stringbuilder,"Normal Mode");
 	}
 	else if (Mode == 2)
 	{
-		 rb->strcat(Stringbuilder,"Expert Mode");
+		 dostrcat(Stringbuilder,"Expert Mode");
 	}
 	/*else if (Mode == 3)
 	{
-		 rb->strcat(Stringbuilder,"Two Player Mode");
+		 dostrcat(Stringbuilder,"Two Player Mode");
 	}
 	else if (Mode == 4 && IsHolloween)
 	{
-		 rb->strcat(Stringbuilder,"Halloween Event");
+		 dostrcat(Stringbuilder,"Halloween Event");
 	}
 	else if (Mode == 4 && IsChristmas)
 	{
-		 rb->strcat(Stringbuilder,"Winter Event");
+		 dostrcat(Stringbuilder,"Winter Event");
 	}
 	else if (Mode == 4)
 	{
-		 rb->strcat(Stringbuilder,"Custom Mode");
+		 dostrcat(Stringbuilder,"Custom Mode");
 	}*/
 	else
 	{
-		 rb->strcat(Stringbuilder,"raaad mode");
+		 dostrcat(Stringbuilder,"raaad mode");
 	}
 	if((Mode == 0 || Mode == 2) && UseCheckpoints)
 	{
 		if (Score > 500)
 			LineBreak();
 		if (Score > 1000)
-			 rb->strcat(Stringbuilder,"Checkpoint Achieved: 1000");
+			 dostrcat(Stringbuilder,"Checkpoint Achieved: 1000");
 		else if (Score > 500)
-			 rb->strcat(Stringbuilder,"Checkpoint Achieved: 500");
+			 dostrcat(Stringbuilder,"Checkpoint Achieved: 500");
 	}
 
 	LineBreak();
 	LineBreak();
-	 rb->strcat(Stringbuilder,"Press Up to Continue");
+	 dostrcat(Stringbuilder,"Press Up to Continue");
 	LineBreak();
-	 rb->strcat(Stringbuilder,"Press Down to Quit");
+	 dostrcat(Stringbuilder,"Press Down to Quit");
 
-	rb->strcpy(WriteBoard, Stringbuilder);;
+	dostrcpy(WriteBoard, Stringbuilder);;
 	if (ColorMode)
 		TextBoxReplaceRtf(WriteBoard);
 	else
@@ -1709,7 +1728,7 @@ static void StartScreen(void)
 					"##############################\n#............................#\n#.......@@@@@@@@@@@@.........#\n#.......@ Press Up @........%#\n#.......@@@@@@@@@@@@.........#\n#............................#\n##############################\n"
 		       };
 		char smolbuf1[270];
-		rb->snprintf(smolbuf1, 270, "\n     Version RockBox \n%s\n   (c) othello7 2019-2022", introanim[anim]);
+		dosnprintf(smolbuf1, 270, "\n     Version RockBox \n%s\n   (c) othello7 2019-2022", introanim[anim]);
 		TextBoxReplace(smolbuf1);
 		anim++;
 		if(anim > 32)
@@ -1881,7 +1900,7 @@ static void Run(void){
 		BlockHandling();
 
 
-		rb->strcpy(WriteBoard, Stringbuilder);
+		dostrcpy(WriteBoard, Stringbuilder);
 
 		DisplayAndDelay();
 
@@ -1897,7 +1916,7 @@ static void Game(void)
 	Initialize();
 	//TextBoxWriteLine("Setting Colors");
 	//InitConsoleColors();
-	BlueBackground(false);
+	//BlueBackground(false);
 
 	//ImportSettings();
 
