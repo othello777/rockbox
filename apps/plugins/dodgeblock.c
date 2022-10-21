@@ -179,15 +179,82 @@ static void TextBoxReplace(char *input)
 	dostrcpy(str, input);
 	char *save;
 	char delim[] = "\n";
-
 	char *ptr = rb->strtok_r(str, delim, &save);
-
 	int line = 0;
+	unsigned int color;
 	rb->lcd_clear_display();
+	rb->lcd_set_background(LCD_RGBPACK(0, 0, 0xFF * bluebg));
 	while(ptr != NULL)
 	{
-		rb->lcd_puts(0, line, ptr);
-		ptr = rb->strtok_r(NULL, delim, &save);
+		//char **result = malloc(255);
+		char *save2;
+		char delim2[] = "\\";
+		char *ptr2 = strtok_r(ptr, delim2, &save2);
+		int col = 0;
+		void setcolor(int r, int g, int b)
+		{
+			color = LCD_RGBPACK(r, g, b);
+			rb->lcd_set_foreground(color);
+			memmove(ptr2, ptr2+1, strlen(ptr2));
+		}
+		while(ptr2 != NULL)
+		{
+			if(ptr2 != NULL)
+				if(ptr2[0] == 'c')
+					memmove(ptr2, ptr2+2, strlen(ptr2));
+			//bool startofline = false;
+			switch (ptr2[0])
+			{
+				case '0':
+					color = Black;
+					setcolor(0x00, 0x00, 0x00);
+					break;
+				case '1':
+					setcolor(0xFF, 0xFF, 0xFF);
+					break;
+				case '2':
+					color = Green;
+					setcolor(0,255,0);
+					break;
+				case '3':
+					color = Yellow;
+					setcolor(255,255,0);
+					break;
+				case '4':
+					color = Magenta;
+					setcolor(255,0,255);
+					break;
+				case '5':
+					color = Red;
+					setcolor(255,0,0);
+					break;
+				case '6':
+					color = Blue;
+					setcolor(0,0,255);
+					break;
+				case '7':
+					color = Cyan;
+					setcolor(0,255,255);
+					break;
+				case '8':
+					color = DarkMagenta;
+					setcolor(255,120,0);
+					break;
+				case '9':
+					color = DarkGreen;
+					setcolor(0,100,0);
+					break;
+				default:
+					//startofline = true;
+					break;
+			}
+			rb->lcd_puts(col, line, ptr2);
+			col += rb->strlen(ptr2);
+			ptr2 = rb->strtok_r(NULL, delim2, &save2);
+			//ptr2 = strstr(ptr2, delim2);// tokenize(NULL, save2, ptr, delim2);
+
+		}
+		ptr = strtok_r(NULL, delim, &save);
 		line = line + 1;
 	}
 	rb->lcd_update();
@@ -560,7 +627,6 @@ static void Initialize(void)
 
 static void StringBuilderSetColor(int color)
 {
-	return;
 	switch (color)
 	{
 		case Black:
@@ -618,13 +684,13 @@ static void SettingsMenu(void)
 	BlueBackground(true);
 	StringBuilderSetColor(White);
 
-	TextBoxReplace("  \n     ###########Settings###########\n     "
-							"#                            #\n     "
-							"#    Right = Mute/Unmute     #\n     "
-							"#    Left = Control Type     #\n     "
-							"#    Up = Return to Game     #\n     "
-							"#                            #\n     "
-							"##############################\n     ");
+	TextBoxReplace( "###########Settings###########\n"
+					"#                            #\n"
+					"#    Right = Mute/Unmute     #\n"
+					"#    Left = Control Type     #\n"
+					"#    Up = Return to Game     #\n"
+					"#                            #\n"
+					"##############################\n");
 	int ButtonCooldown = 0;
 	bool NotReturned = true;
 
@@ -1956,7 +2022,7 @@ static void Game(void)
 	//InternetConnect();
 
 	TextBoxWriteLine("Start Game");
-	DoSleep(200);
+	DoSleep(1200);
 	StartScreen();
 
 	//if (MuteMusic)
