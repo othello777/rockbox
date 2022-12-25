@@ -28,11 +28,11 @@
 
 #define AMP 32000
 
-#define RFK_VERSION "v1.4142135.406"
+//#define RFK_VERSION "v1.4142135.406"
 
 #define SCR_BACK BUTTON_SCROLL_BACK
 #define SCR_FWD BUTTON_SCROLL_FWD
-#define RFK_SELECT        BUTTON_SELECT
+//#define RFK_SELECT        BUTTON_SELECT
 #define RFK_UP            BUTTON_MENU
 #define RFK_DOWN          BUTTON_PLAY
 #define RFK_RIGHT         BUTTON_RIGHT
@@ -189,19 +189,19 @@ static void TextBoxReplace(char *input)
 		//char **result = malloc(255);
 		char *save2;
 		char delim2[] = "\\";
-		char *ptr2 = strtok_r(ptr, delim2, &save2);
+		char *ptr2 = rb->strtok_r(ptr, delim2, &save2);
 		int col = 0;
 		void setcolor(int r, int g, int b)
 		{
 			color = LCD_RGBPACK(r, g, b);
 			rb->lcd_set_foreground(color);
-			memmove(ptr2, ptr2+1, strlen(ptr2));
+			memmove(ptr2, ptr2+1, rb->strlen(ptr2));
 		}
 		while(ptr2 != NULL)
 		{
 			if(ptr2 != NULL)
 				if(ptr2[0] == 'c')
-					memmove(ptr2, ptr2+2, strlen(ptr2));
+					memmove(ptr2, ptr2+2, rb->strlen(ptr2));
 			//bool startofline = false;
 			switch (ptr2[0])
 			{
@@ -254,7 +254,7 @@ static void TextBoxReplace(char *input)
 			//ptr2 = strstr(ptr2, delim2);// tokenize(NULL, save2, ptr, delim2);
 
 		}
-		ptr = strtok_r(NULL, delim, &save);
+		ptr = rb->strtok_r(NULL, delim, &save);
 		line = line + 1;
 	}
 	rb->lcd_update();
